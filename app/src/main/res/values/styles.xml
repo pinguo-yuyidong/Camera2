@@ -1,0 +1,65 @@
+<resources>
+
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="android:Theme.Material.NoActionBar.Fullscreen">
+        <!-- Customize your theme here. -->
+    </style>
+
+    <style name="OptionsLayout">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">@dimen/option_item_height</item>
+        <item name="android:orientation">vertical</item>
+    </style>
+
+    <style name="OptionsItemClickable" parent="@style/OptionsLayout">
+        <item name="android:paddingLeft">14dp</item>
+        <item name="android:background">@drawable/bg_transparent_yellow</item>
+    </style>
+
+    <style name="OptionsItemIcon">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginRight">12dp</item>
+        <item name="android:layout_centerVertical">true</item>
+    </style>
+
+    <style name="OptionsItemText">
+        <item name="android:textColor">@drawable/advance_setting_item_text_color</item>
+        <item name="android:textSize">@dimen/personal_eamil_text_size</item>
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_centerVertical">true</item>
+    </style>
+
+    <style name="OptionsItemIconMoreNew">
+        <item name="android:layout_width">6dp</item>
+        <item name="android:layout_height">6dp</item>
+        <item name="android:layout_marginRight">12dp</item>
+        <item name="android:layout_centerVertical">true</item>
+        <item name="android:background">@drawable/ic_new_tag</item>
+    </style>
+
+    <style name="OptionsItemIconMore">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginRight">12dp</item>
+        <item name="android:layout_alignParentRight">true</item>
+        <item name="android:layout_centerVertical">true</item>
+        <item name="android:src">@drawable/advance_setting_item_more_icon</item>
+    </style>
+
+    <style name="TranslucentStripsWhite">
+        <item name="android:layout_width">fill_parent</item>
+        <item name="android:layout_height">1px</item>
+        <item name="android:background">#c9cdd1</item>
+    </style>
+
+    <style name="loading_dialog" parent="android:style/Theme.Dialog">
+        <item name="android:windowFrame">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowBackground">@drawable/bg_loading</item>
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+    </style>
+
+</resources>

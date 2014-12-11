@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="option_item_height">49dp</dimen>
+    <dimen name="option_item_summery_txt_size">10sp</dimen>
+</resources>

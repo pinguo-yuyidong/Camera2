@@ -1,0 +1,7 @@
+<resources>
+    <!-- Default screen margins, per the Android Design guidelines. -->
+    <dimen name="activity_horizontal_margin">16dp</dimen>
+    <dimen name="activity_vertical_margin">16dp</dimen>
+    <!-- 设置设置项每项文字的大小 -->
+    <dimen name="personal_eamil_text_size">15sp</dimen>
+</resources>

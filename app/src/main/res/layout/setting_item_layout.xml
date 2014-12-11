@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content">
+
+    <RelativeLayout style="@style/OptionsItemClickable">
+
+        <ImageView
+            android:id="@+id/option_item_icon"
+            style="@style/OptionsItemIcon"
+            android:contentDescription="@string/empty_string" />
+
+        <TextView
+            android:id="@+id/title"
+            android:layout_toRightOf="@+id/option_item_icon"
+            style="@style/OptionsItemText"
+            android:layout_centerVertical="true" />
+
+
+        <ImageView
+            android:id="@+id/image_new"
+            android:layout_toLeftOf="@+id/image"
+            android:visibility="gone"
+            style="@style/OptionsItemIconMoreNew" />
+
+        <ImageView
+            android:id="@+id/image"
+            style="@style/OptionsItemIconMore" />
+    </RelativeLayout>
+
+    <ImageView style="@style/TranslucentStripsWhite" />
+</RelativeLayout>

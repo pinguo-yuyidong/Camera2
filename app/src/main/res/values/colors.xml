@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 分割线 黄色 -->
+    <color name="popup_title_color">#c9cdd1</color>
+    <color name="advance_setting_item_bg">#f8f8f8</color>
+
+    <color name="common_title_text">#565555</color>
+</resources>
