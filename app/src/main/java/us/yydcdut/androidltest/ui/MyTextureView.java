@@ -2,6 +2,7 @@ package us.yydcdut.androidltest.ui;
 
 import android.content.Context;
 import android.util.AttributeSet;
+import android.view.MotionEvent;
 import android.view.TextureView;
 
 /**
@@ -10,6 +11,7 @@ import android.view.TextureView;
 public class MyTextureView extends TextureView {
     private int mWidth = 0;
     private int mHeight = 0;
+    private MyTextureViewTouchEvent mMyTextureViewTouchEvent;
 
     public MyTextureView(Context context) {
         super(context);
@@ -53,4 +55,18 @@ public class MyTextureView extends TextureView {
         mHeight = height;
         requestLayout();
     }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        return mMyTextureViewTouchEvent.onAreaTouchEvent(event);
+    }
+
+    public void setmMyTextureViewTouchEvent(MyTextureViewTouchEvent myTextureViewTouchEvent){
+        this.mMyTextureViewTouchEvent = myTextureViewTouchEvent;
+    }
+
+    interface MyTextureViewTouchEvent{
+        public boolean onAreaTouchEvent(MotionEvent event);
+    }
+
 }

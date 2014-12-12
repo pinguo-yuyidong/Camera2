@@ -37,6 +37,14 @@
 
     </LinearLayout>
 
+    <SeekBar
+        android:id="@+id/sb_focus"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/btn_capture"
+        android:layout_marginBottom="10dip"
+        />
+
     <ImageView
         android:id="@+id/btn_capture"
         android:layout_width="wrap_content"

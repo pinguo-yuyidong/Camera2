@@ -53,15 +53,10 @@ public class ImageSaver implements Runnable {
         public void onImageAvailable(ImageReader imageReader) {
             Image image = imageReader.acquireLatestImage();
             checkParentDir();
-            File file = null;
+            File file;
             if (mFormat == ImageFormat.JPEG) {
                 checkJpegDir();
                 file = createJpeg();
-                try {
-                    file.createNewFile();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
                 //这里到最后会出现null,所有trycatch一下
                 try {
                     ByteBuffer buffer = image.getPlanes()[0].getBuffer();
@@ -81,15 +76,12 @@ public class ImageSaver implements Runnable {
                 checkDngDir();
                 file = createDng();
                 try {
-                    file.createNewFile();
+                    if (mDngCreator != null) {
+                        mDngCreator.writeImage(new FileOutputStream(file), image);
+                    }
                 } catch (IOException e) {
                     e.printStackTrace();
-                }
-                try {
-                    mDngCreator.writeImage(new FileOutputStream(file), image);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } catch (Exception e){
+                } catch (Exception e) {
                     Log.i("Exception e", "mDngCreator.writeImage(new FileOutputStream(file), image)");
                 }
                 try {//image可能为null
