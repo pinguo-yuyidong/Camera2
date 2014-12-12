@@ -6,7 +6,6 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -68,13 +67,10 @@ public class SettingFragment extends Fragment implements View.OnClickListener {
         txtTitle.setText(returnCameraName(name) + " 设置");
         SettingItem itemFormat = (SettingItem) v.findViewById(R.id.setting_item_format);
         SettingItem itemSize = (SettingItem) v.findViewById(R.id.setting_item_size);
-        SettingItem itemPreview = (SettingItem) v.findViewById(R.id.setting_item_preview);
         itemFormat.getTitle().setText("图片格式");
         itemFormat.setOnClickListener(this);
         itemSize.getTitle().setText("图片大小");
         itemSize.setOnClickListener(this);
-        itemPreview.getTitle().setText("预览大小");
-        itemPreview.setOnClickListener(this);
         return v;
     }
 
@@ -99,9 +95,6 @@ public class SettingFragment extends Fragment implements View.OnClickListener {
                 break;
             case R.id.setting_item_size:
                 sizeDialog();
-                break;
-            case R.id.setting_item_preview:
-                previewDialog();
                 break;
         }
     }
@@ -175,39 +168,4 @@ public class SettingFragment extends Fragment implements View.OnClickListener {
         builder.create().show();
     }
 
-    private void previewDialog() {
-        //获取当前cameraid的所有preview尺寸
-        String[] previewSize = PreferenceHelper.getPreviewSize(getActivity(), mCameraName);
-        final int which = mSp.getInt("format", 0);
-        int width = mSp.getInt("previewSize_width", 0);
-        int height = mSp.getInt("previewSize_height", 0);
-        String size = width + "*" + height;
-        //<名字, 数组序号>
-        Map<String, Integer> map1 = new HashMap<String, Integer>();
-        //<数组序号, 名字>
-        final Map<Integer, String> map3 = new HashMap<Integer, String>();
-        for (int i = 0; i < previewSize.length; i++) {
-            map1.put(previewSize[i], i);
-            map3.put(i, previewSize[i]);
-        }
-        AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
-        builder.setTitle("选择预览大小");
-        //map1.get(size)，该大小再数组中的位置
-        builder.setSingleChoiceItems(previewSize, map1.get(size), new DialogInterface.OnClickListener() {
-
-            @Override
-            public void onClick(DialogInterface dialogInterface, int i) {
-                Log.i("previewDialog", "previewSize-->" + map3.get(i));
-                String size = map3.get(i);
-                String[] arr = size.split("\\*");
-                String width = arr[0];
-                String height = arr[1];
-                mEditor.putInt("previewSize_width", Integer.parseInt(width));
-                mEditor.putInt("previewSize_height", Integer.parseInt(height));
-                mEditor.commit();
-                dialogInterface.dismiss();
-            }
-        });
-        builder.create().show();
-    }
 }

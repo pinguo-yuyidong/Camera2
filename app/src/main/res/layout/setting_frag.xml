@@ -22,11 +22,4 @@
         >
     </us.yydcdut.androidltest.ui.SettingItem>
 
-    <us.yydcdut.androidltest.ui.SettingItem
-        android:id="@+id/setting_item_preview"
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        >
-    </us.yydcdut.androidltest.ui.SettingItem>
-
 </LinearLayout>

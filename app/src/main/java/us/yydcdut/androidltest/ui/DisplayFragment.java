@@ -6,7 +6,9 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.graphics.ImageFormat;
+import android.graphics.Matrix;
 import android.graphics.Rect;
+import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
@@ -256,14 +258,13 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
                 openCamera(i, i2);
             } catch (CameraAccessException e) {
                 e.printStackTrace();
-                Log.i("onSurfaceTextureAvailable", "openCamera--->CameraAccessException e");
             }
         }
 
         @Override
         public void onSurfaceTextureSizeChanged(SurfaceTexture surfaceTexture, int i, int i2) {
             Log.i("SurfaceTextureListener", "onSurfaceTextureSizeChanged");
-            //configureTransform(i, i2);
+            configureTransform(i, i2);
         }
 
         @Override
@@ -278,32 +279,33 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
         }
     };
 
+
     @Override
     public void onPause() {
         super.onPause();
         Log.i("onPause", "onPause");
-        closeCamera();
+        try {
+            closeCamera();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         saveCurrentPreference();
     }
 
     /**
      * 关闭相机
      */
-    private void closeCamera() {
-        try {
-            if (null != mCameraDevice) {
-                mCameraDevice.close();
-                mCameraDevice = null;
-            }
-            if (mHandler != null) {
-                //关闭线程
-                mHandlerThread.quitSafely();
-                mHandlerThread.join();
-                mHandlerThread = null;
-                mHandler = null;
-            }
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+    private void closeCamera() throws InterruptedException {
+        if (null != mCameraDevice) {
+            mCameraDevice.close();
+            mCameraDevice = null;
+        }
+        if (mHandler != null) {
+            //关闭线程
+            mHandlerThread.quitSafely();
+            mHandlerThread.join();
+            mHandlerThread = null;
+            mHandler = null;
         }
     }
 
@@ -323,10 +325,8 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
     private void openCamera(int viewWidth, int viewHeight) throws CameraAccessException {
         //获得camera服务
         mCameraManager = (CameraManager) getActivity().getSystemService(Context.CAMERA_SERVICE);
-        //获得cameraid
-        //String[] cameraIds = mCameraManager.getCameraIdList();
-        initCameraParam(mCameraId, viewWidth, viewHeight);
-        //configureTransform(viewWidth, viewHeight);
+        setUpCameraOutputs(viewWidth, viewHeight);
+        configureTransform(viewWidth, viewHeight);
         //打开相机
         mCameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, mHandler);
     }
@@ -334,14 +334,13 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
     /**
      * 得到CameraCharacteristics等信息，设置显示大小
      *
-     * @param cameraId
      * @param viewWidth
      * @param viewHeight
      * @throws CameraAccessException
      */
-    private void initCameraParam(String cameraId, int viewWidth, int viewHeight) throws CameraAccessException {
+    private void setUpCameraOutputs(int viewWidth, int viewHeight) throws CameraAccessException {
         //描述CameraDevice属性
-        mCameraCharacteristics = mCameraManager.getCameraCharacteristics(cameraId);
+        mCameraCharacteristics = mCameraManager.getCameraCharacteristics(mCameraId);
         //流配置
         StreamConfigurationMap map = mCameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
         //适合SurfaceTexture的显示的size
@@ -349,27 +348,41 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
         Size largest = Collections.max(
                 Arrays.asList(map.getOutputSizes(ImageFormat.JPEG)),
                 new SizeComparator());
-//        for (Size s : sizes) {
-//            Log.i("map.getOutputSizes", "s.getHeight()--->" + s.getHeight() + ".....s.getWidth()--->" + s.getWidth());
-//        }
-//        //获得帧率
-//        Range<Integer>[] fps = mCameraCharacteristics.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
-//        for (int i = 0; i < fps.length; i++) {
-//            Log.i("fps", "fps[" + i + "]" + fps[i]);
-//        }
-        mPreviewSize = getSuitablePreviewSize(sizes, viewWidth, viewHeight, largest);
-        int width = mSp.getInt("previewSize_width", 0);
-        int height = mSp.getInt("previewSize_height", 0);
-//        mPreviewSize = sizes[0];
+        mPreviewSize = chooseOptimalSize(sizes, viewWidth, viewHeight, largest);
         // 选择适合TextureView的长宽比的大小预览
         int orientation = getResources().getConfiguration().orientation;
         if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
-//            mTextureView.fitWindow(width, height);
             mTextureView.fitWindow(mPreviewSize.getWidth(), mPreviewSize.getHeight());
         } else {
-            //方向旋转后的显示
-//            mTextureView.fitWindow(height, width);
+            mTextureView.fitWindow(mPreviewSize.getHeight(), mPreviewSize.getWidth());
         }
+    }
+
+    /**
+     * @param viewWidth
+     * @param viewHeight
+     */
+    private void configureTransform(int viewWidth, int viewHeight) {
+        Activity activity = getActivity();
+        if (null == mTextureView || null == mPreviewSize || null == activity) {
+            return;
+        }
+        int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
+        Matrix matrix = new Matrix();
+        RectF viewRect = new RectF(0, 0, viewWidth, viewHeight);
+        RectF bufferRect = new RectF(0, 0, mPreviewSize.getHeight(), mPreviewSize.getWidth());
+        float centerX = viewRect.centerX();
+        float centerY = viewRect.centerY();
+        if (Surface.ROTATION_90 == rotation || Surface.ROTATION_270 == rotation) {
+            bufferRect.offset(centerX - bufferRect.centerX(), centerY - bufferRect.centerY());
+            matrix.setRectToRect(viewRect, bufferRect, Matrix.ScaleToFit.FILL);
+            float scale = Math.max(
+                    (float) viewHeight / mPreviewSize.getHeight(),
+                    (float) viewWidth / mPreviewSize.getWidth());
+            matrix.postScale(scale, scale, centerX, centerY);
+            matrix.postRotate(90 * (rotation - 2), centerX, centerY);
+        }
+        mTextureView.setTransform(matrix);
     }
 
     /**
@@ -380,7 +393,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
      * @param viewHeight
      * @return
      */
-    private Size getSuitablePreviewSize(Size[] sizes, int viewWidth, int viewHeight, Size largeSize) {
+    private Size chooseOptimalSize(Size[] sizes, int viewWidth, int viewHeight, Size largeSize) {
         List<Size> bigEnough = new ArrayList<Size>();
         int w = largeSize.getWidth();
         int h = largeSize.getHeight();
@@ -452,31 +465,22 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
             return;
         }
         //设置默认的图像缓冲区的大小
-        int width = mSp.getInt("previewSize_width", 0);
-        int height = mSp.getInt("previewSize_height", 0);
-//        Log.i("startPreview", "width--->" + width + ",,,mPreviewSize.getWidth()--->" + mPreviewSize.getWidth() + ",,,height--->" + height + ",,,mPreviewSize.getHeight()" + mPreviewSize.getHeight());
-//        texture.setDefaultBufferSize(width, height);
         texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
-        Log.i("texture", "mPreviewSize.getWidth()--->" + mPreviewSize.getWidth() + ",,,mPreviewSize.getHeight()--->" + mPreviewSize.getHeight());
         //显示的Surface
         surface = new Surface(texture);
         //TEMPLATE_PREVIEW--->创建一个请求适合相机预览窗口。
         mPreviewBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
         mPreviewBuilder.addTarget(surface);
         //3A
-        //mPreviewBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
-        mPreviewBuilder.set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_EDOF);
+        mPreviewBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
+        //AE
+        //mPreviewBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_MODE_OFF);
+        //AF
+        mPreviewBuilder.set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_AUTO);
+
         //创建拍照会话，一旦CameraCaptureSession创建,可以提交请求（capture、captureBurst,或setRepeatingBurst）。
         mState = STATE_PREVIEW;
         mCameraDevice.createCaptureSession(Arrays.asList(surface), mSessionStateCallback, mHandler);
-
-
-//        Log.i("mCameraCharacteristics", "mCameraCharacteristics.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AF)--->" + mCameraCharacteristics.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AF));
-//        Log.i("mCameraCharacteristics", "mCameraCharacteristics.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE)--->" + mCameraCharacteristics.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE));
-//        mFocalLength = mCameraCharacteristics.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS);
-//        for (int i = 0; i < mFocalLength.length; i++) {
-//            Log.i("mCameraCharacteristics", "mCameraCharacteristics.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)--->" + mFocalLength[i]);
-//        }
     }
 
     /**
@@ -494,19 +498,13 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
                     //flash
 //                    mPreviewBuilder.set(CaptureRequest.FLASH_MODE, CameraMetadata.FLASH_MODE_SINGLE);
                     //这里也就是updatePreview，(官方文档--->请求无休止地重复捕获的图像捕获会话。)
-                    //CONTROL_MODE--->3A整体模式(在自动曝光、自动白平衡、自动对焦)控制
-                    //CONTROL_MODE_AUTO--->当设置为自动时,自己在android.control算法控制
                     cameraCaptureSession.setRepeatingRequest(mPreviewBuilder.build(), null, mHandler);
-                    Log.i("CONTROL_AF_TRIGGER", "mPreviewBuilder.get(CaptureRequest.CONTROL_AF_TRIGGER)--->" + mPreviewBuilder.get(CaptureRequest.CONTROL_AF_TRIGGER));
                 } catch (CameraAccessException e) {
                     e.printStackTrace();
                 }
             } else if (mState == STATE_CAPTURE) {
                 try {
                     cameraCaptureSession.setRepeatingRequest(mCaptureBuilder.build(), mSessionCaptureCallback, mHandler);
-//                    List<CaptureRequest> list = new ArrayList<CaptureRequest>();
-//                    list.add(mCaptureBuilder.build());
-//                    cameraCaptureSession.setRepeatingBurst(list,mSessionCaptureCallback, mHandler);
                 } catch (CameraAccessException e) {
                     e.printStackTrace();
                 }
@@ -521,7 +519,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
                 Toast.makeText(activity, "Failed", Toast.LENGTH_SHORT).show();
             }
             //因为尺寸问题可能导致开始时候配置失败，如果那样的话就不断的去开启直到成功
-            //getActivity().getFragmentManager().beginTransaction().replace(R.id.frame_main, DisplayFragment.newInstance()).commit();
+            getActivity().getFragmentManager().beginTransaction().replace(R.id.frame_main, DisplayFragment.newInstance()).commit();
         }
     };
 
@@ -587,45 +585,54 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
      */
     @Override
     public boolean onAreaTouchEvent(MotionEvent event) {
-        //这里存折聚焦的left,right,top,bottm
-        Rect rect = mCameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
-        int x = rect.right;
-        int y = rect.bottom;
-        int a = mTextureView.getWidth();
-        int b = mTextureView.getHeight();
-        int l, r, ll, rr;
-        Rect newRect;
         switch (event.getAction()) {
+            case MotionEvent.ACTION_DOWN:
+                break;
             case MotionEvent.ACTION_UP:
-                l = (int) event.getX();
-                r = (int) event.getY();
-                ll = (l * x) / a;
-                rr = (r * y) / b;
-                Log.i("onAreaTouchEvent", "ARRAY_SIZE，，x--->" + x + ",,,y--->" + y);
-                Log.i("onAreaTouchEvent", "mTextureView.getWidth()--->" + a + ",,,mTextureView.getHeight()--->" + b);
-                Log.i("onAreaTouchEvent", "event.getX()--->" + l + ",,,event.getY()--->" + r);
-                Log.i("onAreaTouchEvent", "ll--->" + ll + ",,,rr--->" + rr);
-                newRect = new Rect((ll - 30 > 0) ? (ll - 30) : 0, (rr - 30 > 0) ? (rr - 30) : 0, ll + 30, rr + 30);
-                MeteringRectangle meteringRectangle = new MeteringRectangle(newRect, 1);
+                //这里存折聚焦的left,right,top,bottm
+                Rect rect = mCameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
+                int areaSize = 200;
+                int right = rect.right;
+                int bottom = rect.bottom;
+                int viewWidth = mTextureView.getWidth();
+                int viewHeight = mTextureView.getHeight();
+                int ll, rr;
+                Rect newRect;
+                int centerX = (int) event.getX();
+                int centerY = (int) event.getY();
+                ll = ((centerX * right) - areaSize) / viewWidth;
+                rr = ((centerY * bottom) - areaSize) / viewHeight;
+                int focusLeft = clamp(ll, 0, right);
+                int focusBottom = clamp(rr, 0, bottom);
+//                Log.i("onAreaTouchEvent", "left--->" + left + ",,,right--->" + right + ",,,top--->" + top + ",,,bottom--->" + bottom);
+//                Log.i("onAreaTouchEvent", "mTextureView.getWidth()--->" + a + ",,,mTextureView.getHeight()--->" + b);
+//                Log.i("onAreaTouchEvent", "event.getX()--->" + centerX + ",,,event.getY()--->" + centerY);
+//                Log.i("onAreaTouchEvent", "ll--->" + ll + ",,,rr--->" + rr);
+                Log.i("focus_position", "focusLeft--->" + focusLeft + ",,,focusTop--->" + focusBottom + ",,,focusRight--->" + (focusLeft + areaSize) + ",,,focusBottom--->" + (focusBottom + areaSize));
+                newRect = new Rect(focusLeft, focusBottom, focusLeft + areaSize, focusBottom + areaSize);
+                MeteringRectangle meteringRectangle = new MeteringRectangle(newRect, 500);
                 MeteringRectangle[] meteringRectangleArr = new MeteringRectangle[1];
                 meteringRectangleArr[0] = meteringRectangle;
                 mPreviewBuilder.set(CaptureRequest.CONTROL_AF_REGIONS, meteringRectangleArr);
-//                try {
-//                    mCameraCaptureSession.setRepeatingRequest(mPreviewBuilder.build(), null, mHandler);
-//                } catch (CameraAccessException e) {
-//                    e.printStackTrace();
-//                }
-//                try {
-//                    mCameraDevice.createCaptureSession(Arrays.asList(surface), mSessionStateCallback, mHandler);
-//                } catch (CameraAccessException e) {
-//                    e.printStackTrace();
-//                }
-
+                mPreviewBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START);
+                try {
+                    mCameraCaptureSession.setRepeatingRequest(mPreviewBuilder.build(), null, mHandler);
+                } catch (CameraAccessException e) {
+                    e.printStackTrace();
+                }
                 break;
         }
-
-
         return true;
+    }
+
+    private int clamp(int x, int min, int max) {
+        if (x < min) {
+            return min;
+        } else if (x > max) {
+            return max;
+        } else {
+            return x;
+        }
     }
 
 
@@ -655,14 +662,29 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
 
         @Override
         public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-//            mPreviewBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, (Float.parseFloat(String.valueOf(i)) / 100));
-            float[] f = mCameraCharacteristics.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS);
-            mPreviewBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, (i * f[0] / 100));
-            Log.i("onProgressChanged", "LENS_FOCUS_DISTANCE--->(i*f[0]/100)--->" + (i * f[0] / 100));
-            float[] f1 = mCameraCharacteristics.get(CameraCharacteristics.LENS_INFO_AVAILABLE_APERTURES);
-            mPreviewBuilder.set(CaptureRequest.LENS_APERTURE, (i * f1[0] / 100));
-            Log.i("onProgressChanged", "LENS_APERTURE--->(i*f1[0]/100)--->" + (i * f1[0] / 100) + ",,length--->" + f1.length);
-            mPreviewBuilder.set(CaptureRequest.FLASH_MODE, CameraMetadata.FLASH_MODE_SINGLE);
+//            mPreviewBuilder.set(CaptureRequest.FLASH_MODE, CameraMetadata.FLASH_MODE_SINGLE);
+
+//            //AF--->ok   ???[0,10]
+//            Log.i("onProgressChanged", "mCameraCharacteristics.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE)--->" + mCameraCharacteristics.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE));
+//            float[] f = mCameraCharacteristics.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS);
+//            mPreviewBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, (float) (i/10));
+//            Log.i("onProgressChanged", "LENS_FOCUS_DISTANCE--->" + (i/10));
+
+
+            /*//AE--->OK
+            Range<Long> range = mCameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE);
+            long max = range.getUpper();
+            long min = range.getLower();
+            long ae = ((i * (max - min)) / 100 + min);
+            mPreviewBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, ae);*/
+            float f = mCameraCharacteristics.get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM);
+            Log.i("onProgressChanged", "ffff->>>" + f);
+            Rect rect = mCameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
+            Log.i("111111", rect.left + "   " + rect.top + "   " + rect.right + "   " + rect.bottom);
+            int centerX = rect.centerX();
+            int centerY = rect.centerY();
+            Rect newRect = new Rect(4, 4,  ((100 - i) * 1292 / 100),  ((100 - i) * 972 / 100));
+            mPreviewBuilder.set(CaptureRequest.SCALER_CROP_REGION, newRect);
             try {
                 mCameraCaptureSession.setRepeatingRequest(mPreviewBuilder.build(), null, mHandler);
             } catch (CameraAccessException e) {
