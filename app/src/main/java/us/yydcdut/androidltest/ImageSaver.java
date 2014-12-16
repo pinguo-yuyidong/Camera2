@@ -93,8 +93,6 @@ public class ImageSaver implements Runnable {
                 }
 
             }
-
-
         }
     };
 
@@ -121,6 +119,9 @@ public class ImageSaver implements Runnable {
         }
     }
 
+    /**
+     * 判断dng的文件夹是否存在
+     */
     private void checkDngDir() {
         mDir = new File(Environment.getExternalStorageDirectory() + "/Android_L_Test/dng/");
         if (!mDir.exists()) {

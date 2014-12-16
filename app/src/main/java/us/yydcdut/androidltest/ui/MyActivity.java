@@ -83,7 +83,7 @@ public class MyActivity extends Activity {
                 //初始化参数到sharedPreference
                 CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
                 String[] cameraIds = manager.getCameraIdList();
-                if (cameraIds != null) {
+                if (cameraIds != null && cameraIds.length > 0) {
                     //后置摄像头存在
                     if (cameraIds[0] != null) {
                         CameraCharacteristics character = manager.getCameraCharacteristics(cameraIds[0]);
@@ -149,7 +149,7 @@ public class MyActivity extends Activity {
                 return;
             }
             //初始化一开始打开cameraia为1的摄像头
-            PreferenceHelper.writeCurrentCameraid(MyActivity.this, "1");
+            PreferenceHelper.writeCurrentCameraid(MyActivity.this, "0");
             mHandler.sendEmptyMessage(INIT_OK);
         }
     }
