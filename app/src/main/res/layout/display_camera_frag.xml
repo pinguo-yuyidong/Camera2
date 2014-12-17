@@ -46,6 +46,15 @@
             android:background="@drawable/btn_awb"/>
 
         <ImageView
+            android:id="@+id/btn_iso"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginLeft="10dip"
+            android:layout_marginRight="5dip"
+            android:background="@drawable/btn_iso"/>
+
+        <ImageView
             android:id="@+id/btn_change_camera"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -208,6 +217,33 @@
 
             <us.yydcdut.androidltest.ui.AwbSeekBar
                 android:id="@+id/sb_awb"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginTop="5dip"
+                android:gravity="center"/>
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/layout_iso"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:layout_centerVertical="true"
+            android:orientation="vertical"
+            android:visibility="invisible">
+
+            <Switch
+                android:id="@+id/switch_iso"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginBottom="5dip"
+                android:gravity="center"/>
+
+            <SeekBar
+                android:id="@+id/sb_iso"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"

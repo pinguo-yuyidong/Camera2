@@ -42,7 +42,7 @@ public class MyActivity extends Activity {
                     Bundle bundle = new Bundle();
                     bundle.putString("cameraid", PreferenceHelper.getCurrentCameraid(MyActivity.this));
                     displayFragment.setArguments(bundle);
-                    getFragmentManager().beginTransaction().add(R.id.frame_main, displayFragment).commit();
+                    getFragmentManager().beginTransaction().replace(R.id.frame_main, displayFragment).commit();
                     break;
                 case INIT_BAD:
                     closeDialogLoading();
@@ -67,7 +67,7 @@ public class MyActivity extends Activity {
             Bundle bundle = new Bundle();
             bundle.putString("cameraid", PreferenceHelper.getCurrentCameraid(MyActivity.this));
             displayFragment.setArguments(bundle);
-            getFragmentManager().beginTransaction().add(R.id.frame_main, displayFragment).commit();
+            getFragmentManager().beginTransaction().replace(R.id.frame_main, displayFragment).commit();
         }
     }
 

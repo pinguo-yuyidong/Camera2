@@ -95,7 +95,7 @@ public class PreferenceHelper {
      */
     public static String getCurrentCameraid(Context context) {
         SharedPreferences currentPreferences = context.getSharedPreferences("current", Context.MODE_PRIVATE);
-        return currentPreferences.getString("cameraid", "1");
+        return currentPreferences.getString("cameraid", "0");
     }
 
     /**

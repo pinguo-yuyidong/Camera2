@@ -1,7 +1,6 @@
 package us.yydcdut.androidltest;
 
 import android.graphics.ImageFormat;
-import android.hardware.camera2.DngCreator;
 import android.media.Image;
 import android.media.ImageReader;
 import android.os.Environment;
@@ -19,25 +18,16 @@ import java.util.Random;
 /**
  * Created by yuyidong on 14-12-5.
  */
-public class ImageSaver implements Runnable {
+public class JpegSaver implements Runnable {
 
     private ImageReader mImageReader;
     private Handler mHandler;
     private int mFormat;
-    private File mDir;
-    private DngCreator mDngCreator;
 
-    public ImageSaver(ImageReader mImageReader, Handler mHandler, int format) {
+    public JpegSaver(ImageReader mImageReader, Handler mHandler, int format) {
         this.mImageReader = mImageReader;
         this.mHandler = mHandler;
         this.mFormat = format;
-    }
-
-    public ImageSaver(ImageReader mImageReader, Handler mHandler, int format, DngCreator dngCreator) {
-        this.mImageReader = mImageReader;
-        this.mHandler = mHandler;
-        this.mFormat = format;
-        this.mDngCreator = dngCreator;
     }
 
     @Override
@@ -72,26 +62,6 @@ public class ImageSaver implements Runnable {
                     Log.i("Exception e", "ImageFormat.JPEG,,,,,,,,Exception eException e");
                     e.getStackTrace();
                 }
-            } else if (mFormat == ImageFormat.RAW_SENSOR) {
-                checkDngDir();
-                file = createDng();
-                try {
-                    if (mDngCreator != null) {
-                        mDngCreator.writeImage(new FileOutputStream(file), image);
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } catch (Exception e) {
-                    Log.i("Exception e", "mDngCreator.writeImage(new FileOutputStream(file), image)");
-                }
-                try {//image可能为null
-                    mDngCreator.close();
-                    image.close();
-                } catch (Exception e) {
-                    Log.i("Exception e", "ImageFormat.RAW_SENSOR,,,,,,,,Exception eException e");
-                    e.getStackTrace();
-                }
-
             }
         }
     };
@@ -108,26 +78,14 @@ public class ImageSaver implements Runnable {
 
     /**
      * 判断文件夹是否存在
-     *
-     * @return
      */
     private void checkJpegDir() {
-
-        mDir = new File(Environment.getExternalStorageDirectory() + "/Android_L_Test/jpeg/");
-        if (!mDir.exists()) {
-            mDir.mkdir();
+        File dir = new File(Environment.getExternalStorageDirectory() + "/Android_L_Test/jpeg/");
+        if (!dir.exists()) {
+            dir.mkdir();
         }
     }
 
-    /**
-     * 判断dng的文件夹是否存在
-     */
-    private void checkDngDir() {
-        mDir = new File(Environment.getExternalStorageDirectory() + "/Android_L_Test/dng/");
-        if (!mDir.exists()) {
-            mDir.mkdir();
-        }
-    }
 
     /**
      * 创建jpeg的文件
@@ -137,19 +95,10 @@ public class ImageSaver implements Runnable {
     private File createJpeg() {
         long time = System.currentTimeMillis();
         int random = new Random().nextInt(1000);
-        return new File(mDir, time + "_" + random + ".jpg");
+        File dir = new File(Environment.getExternalStorageDirectory() + "/Android_L_Test/jpeg/");
+        return new File(dir, time + "_" + random + ".jpg");
     }
 
-    /**
-     * 创建dng图片
-     *
-     * @return
-     */
-    private File createDng() {
-        long time = System.currentTimeMillis();
-        int random = new Random().nextInt(1000);
-        return new File(mDir, time + "_" + random + ".dng");
-    }
 
     /**
      * 保存
