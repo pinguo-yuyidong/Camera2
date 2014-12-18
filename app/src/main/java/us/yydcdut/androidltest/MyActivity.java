@@ -1,4 +1,4 @@
-package us.yydcdut.androidltest.ui;
+package us.yydcdut.androidltest;
 
 import android.app.Activity;
 import android.app.Dialog;
@@ -24,8 +24,7 @@ import android.widget.Toast;
 import java.util.ArrayList;
 import java.util.List;
 
-import us.yydcdut.androidltest.PreferenceHelper;
-import us.yydcdut.androidltest.R;
+import us.yydcdut.androidltest.ui.DisplayFragment;
 
 
 public class MyActivity extends Activity {

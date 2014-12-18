@@ -59,7 +59,7 @@ public class MyTextureView extends TextureView {
         this.mMyTextureViewTouchEvent = myTextureViewTouchEvent;
     }
 
-    interface MyTextureViewTouchEvent {
+    public interface MyTextureViewTouchEvent {
         public boolean onAreaTouchEvent(MotionEvent event);
     }
 

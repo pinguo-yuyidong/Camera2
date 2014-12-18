@@ -4,4 +4,6 @@
     <dimen name="activity_vertical_margin">16dp</dimen>
     <!-- 设置设置项每项文字的大小 -->
     <dimen name="personal_eamil_text_size">15sp</dimen>
+    <dimen name="popupwindow_width">100dip</dimen>
+    <dimen name="popupwindow_height">20dip</dimen>
 </resources>

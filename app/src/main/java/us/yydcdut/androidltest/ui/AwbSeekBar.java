@@ -104,7 +104,7 @@ public class AwbSeekBar extends SeekBar {
         });
     }
 
-    interface OnAwbSeekBarChangeListener {
+    public interface OnAwbSeekBarChangeListener {
         public abstract void doInProgress1();
 
         public abstract void doInProgress2();

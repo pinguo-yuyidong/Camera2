@@ -12,6 +12,7 @@
         />
 
     <LinearLayout
+        android:id="@+id/layout_menu"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
@@ -56,11 +57,27 @@
             android:background="@drawable/btn_iso"/>
 
         <ImageView
+            android:id="@+id/btn_effect"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginLeft="10dip"
+            android:layout_marginRight="5dip"
+            android:background="@drawable/btn_effect"/>
+
+        <ImageView
+            android:id="@+id/btn_flash"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginLeft="5dip"
+            android:background="@drawable/btn_flash_off"/>
+
+        <ImageView
             android:id="@+id/btn_change_camera"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginLeft="5dip"
-            android:layout_marginRight="5dip"
             android:background="@drawable/btn_change_camera"/>
 
     </LinearLayout>
@@ -262,8 +279,6 @@
 
         </LinearLayout>
 
-
     </RelativeLayout>
-
 
 </RelativeLayout>

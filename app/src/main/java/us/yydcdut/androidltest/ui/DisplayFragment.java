@@ -4,9 +4,9 @@ import android.app.Activity;
 import android.app.Fragment;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.res.Resources;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
-import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
@@ -16,7 +16,6 @@ import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
-import android.hardware.camera2.params.MeteringRectangle;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.ImageReader;
 import android.os.Bundle;
@@ -37,8 +36,11 @@ import android.view.animation.TranslateAnimation;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ListView;
+import android.widget.PopupWindow;
 import android.widget.RelativeLayout;
 import android.widget.SeekBar;
+import android.widget.SimpleAdapter;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -52,13 +54,19 @@ import java.util.List;
 import us.yydcdut.androidltest.JpegSaver;
 import us.yydcdut.androidltest.PreferenceHelper;
 import us.yydcdut.androidltest.R;
+import us.yydcdut.androidltest.adpater.EffectAdapter;
+import us.yydcdut.androidltest.adpater.FlashAdapter;
 import us.yydcdut.androidltest.callback.DngSessionCallback;
 import us.yydcdut.androidltest.callback.JpegSessionCallback;
+import us.yydcdut.androidltest.listener.AwbSeekBarChangeListener;
+import us.yydcdut.androidltest.listener.EffectItemClickListener;
+import us.yydcdut.androidltest.listener.FlashItemClickListener;
+import us.yydcdut.androidltest.listener.TextureViewTouchEvent;
 
 /**
  * Created by yuyidong on 14-12-4.
  */
-public class DisplayFragment extends Fragment implements View.OnClickListener, MyTextureView.MyTextureViewTouchEvent {
+public class DisplayFragment extends Fragment implements View.OnClickListener {
     private static final int STATE_PREVIEW = 1;
     private static final int STATE_CAPTURE = 2;
     private int mState = 0;
@@ -136,14 +144,6 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
      */
     private CameraCaptureSession mCameraCaptureSession;
     /**
-     * jpeg的拍照会话
-     */
-    private JpegSessionCallback mJpegSessionCallback;
-    /**
-     * dng的拍照会话
-     */
-    private DngSessionCallback mDngSessionCallback;
-    /**
      * 是否显示focus的按钮
      */
     private boolean showAfFlag = false;
@@ -199,6 +199,14 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
      * seekbar中的数字那些的显示
      */
     private TextView mTextView;
+    /**
+     * Effect 的 button
+     */
+    private ImageView mBtnEffect;
+    /**
+     * flash的button
+     */
+    private ImageView mBtnFlash;
     //----------------------------seekbar的值-------------------------
     //初始化的话是实用中间值
     private float valueAF;
@@ -258,7 +266,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
     private void initUIAndListener(View v) {
         mTextureView = (MyTextureView) v.findViewById(R.id.textureview);
         mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
-        mTextureView.setmMyTextureViewTouchEvent(this);
+
         mTextView = (TextView) v.findViewById(R.id.txt_sb_txt);
         mTextView.setVisibility(View.INVISIBLE);
 
@@ -288,6 +296,8 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
         ImageView btnAe = (ImageView) v.findViewById(R.id.btn_ae);
         ImageView btnAwb = (ImageView) v.findViewById(R.id.btn_awb);
         ImageView btnIso = (ImageView) v.findViewById(R.id.btn_iso);
+        mBtnEffect = (ImageView) v.findViewById(R.id.btn_effect);
+        mBtnFlash = (ImageView) v.findViewById(R.id.btn_flash);
 
         btnCapture.setOnTouchListener(new View.OnTouchListener() {
             @Override
@@ -316,6 +326,8 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
         btnAe.setOnClickListener(this);
         btnAwb.setOnClickListener(this);
         btnIso.setOnClickListener(this);
+        mBtnEffect.setOnClickListener(this);
+        mBtnFlash.setOnClickListener(this);
         //switch
         MyOnCheckedChangeListener myOnClickChangeListener = new MyOnCheckedChangeListener();
         switchAf.setOnCheckedChangeListener(myOnClickChangeListener);
@@ -328,7 +340,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
         MySeekBarListener listener = new MySeekBarListener();
         sbAf.setOnSeekBarChangeListener(listener);
         sbAe.setOnSeekBarChangeListener(listener);
-        sbAwb.setmOnAwbSeekBarChangeListener(new MyAwbSeekBarChangedListener());
+        sbAwb.setmOnAwbSeekBarChangeListener(new AwbSeekBarChangeListener(mTextView, mPreviewBuilder, mCameraCaptureSession, mHandler));
         sbIso.setOnSeekBarChangeListener(listener);
         sbAf.setEnabled(false);
         sbIso.setEnabled(false);
@@ -368,14 +380,11 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
         //图片尺寸
         int sizeWidth = mSp.getInt("format_" + mFormat + "_pictureSize_width", 1280);
         int sizeHeight = mSp.getInt("format_" + mFormat + "_pictureSize_height", 960);
-        Log.i("takePicture", "format_" + mFormat + "_pictureSize_width--->" + sizeWidth);
-        Log.i("takePicture", "format_" + mFormat + "_pictureSize_height--->" + sizeHeight);
         //得到ImageReader对象,5为maxImage，放入队列里面的最大连拍张数(应该是这个意思)
         mImageReader = ImageReader.newInstance(sizeWidth, sizeHeight, mFormat, 5);
         //得到surface
         List<Surface> outputFurfaces = new ArrayList<Surface>(2);
         outputFurfaces.add(mImageReader.getSurface());
-        //outputFurfaces.add(new Surface(mTextureView.getSurfaceTexture()));
         //创建构建者，配置参数
         mCaptureBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
         if (mFormat == ImageFormat.RAW_SENSOR) {
@@ -518,15 +527,9 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
      * 开始Preview
      */
     private void startPreview() {
-        if (null == mCameraDevice || !mTextureView.isAvailable()) {
-            Log.i("startPreview", "null == mCameraDevice || !mTextureView.isAvailable() ");
-            Log.i("startPreview", "null == mCameraDevice--->" + (null == mCameraDevice));
-            Log.i("startPreview", "!mTextureView.isAvailable()--->" + (!mTextureView.isAvailable()));
-            return;
-        }
-        //得到SurfaceTexture
-        SurfaceTexture texture = mTextureView.getSurfaceTexture();
         try {
+            //得到SurfaceTexture
+            SurfaceTexture texture = mTextureView.getSurfaceTexture();
             mPreviewBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             //设置默认的图像缓冲区的大小
             texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
@@ -591,6 +594,9 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
             mCameraCaptureSession.setRepeatingRequest(mPreviewBuilder.build(), null, mHandler);
         } catch (CameraAccessException e) {
             e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.i("updatePreview", "ExceptionExceptionException");
         }
     }
 
@@ -606,10 +612,18 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
         }
     }
 
+    /**
+     * 设置touch触摸聚焦监听器
+     */
+    private void setTextureViewTouchListener() {
+        //开始显示的时候将触摸变焦监听器设置了
+        mTextureView.setmMyTextureViewTouchEvent(new TextureViewTouchEvent(mCameraCharacteristics, mTextureView, mPreviewBuilder, mCameraCaptureSession, mHandler));
+    }
+
     @Override
-    public void onPause() {
-        super.onPause();
-        Log.i("onPause", "onPause");
+    public void onStop() {
+        super.onStop();
+        Log.i("onDestroy", "onDestroy");
         closeCamera();
         saveCurrentPreference();
     }
@@ -650,8 +664,8 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
         @Override
         public void onSurfaceTextureAvailable(SurfaceTexture surfaceTexture, int i, int i2) {
             Log.i("SurfaceTextureListener", "onSurfaceTextureAvailable");
-            initHandler();
             try {
+                initHandler();
                 openCamera(i, i2);
             } catch (CameraAccessException e) {
                 e.printStackTrace();
@@ -713,10 +727,10 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
         @Override
         public void onConfigured(CameraCaptureSession cameraCaptureSession) {
             Log.i("CameraCaptureSession.StateCallback", "mSessionStateCallback--->onConfigured");
-            Log.i("CameraCaptureSession.StateCallback", "mState--->" + mState);
             if (mState == STATE_PREVIEW) {
                 try {
                     mCameraCaptureSession = cameraCaptureSession;
+                    setTextureViewTouchListener();
                     cameraCaptureSession.setRepeatingRequest(mPreviewBuilder.build(), null, mHandler);
                 } catch (CameraAccessException e) {
                     e.printStackTrace();
@@ -799,72 +813,35 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
                 showIsoFlag = !showIsoFlag;
                 showLayout(SHOW_ISO, showIsoFlag);
                 break;
-        }
-    }
-
-    /**
-     * 触摸对焦，好像不起作用
-     *
-     * @param event
-     * @return
-     */
-    @Override
-    public boolean onAreaTouchEvent(MotionEvent event) {
-        switch (event.getAction()) {
-            case MotionEvent.ACTION_DOWN:
-                //这里存折聚焦的left,right,top,bottm
-                Rect rect = mCameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
-                int areaSize = 200;
-                int right = rect.right;
-                int bottom = rect.bottom;
-                int viewWidth = mTextureView.getWidth();
-                int viewHeight = mTextureView.getHeight();
-                int ll, rr;
-                Rect newRect;
-                int centerX = (int) event.getX();
-                int centerY = (int) event.getY();
-                ll = ((centerX * right) - areaSize) / viewWidth;
-                rr = ((centerY * bottom) - areaSize) / viewHeight;
-                int focusLeft = clamp(ll, 0, right);
-                int focusBottom = clamp(rr, 0, bottom);
-                Log.i("focus_position", "focusLeft--->" + focusLeft + ",,,focusTop--->" + focusBottom + ",,,focusRight--->" + (focusLeft + areaSize) + ",,,focusBottom--->" + (focusBottom + areaSize));
-                newRect = new Rect(focusLeft, focusBottom, focusLeft + areaSize, focusBottom + areaSize);
-                MeteringRectangle meteringRectangle = new MeteringRectangle(newRect, 500);
-                MeteringRectangle[] meteringRectangleArr = new MeteringRectangle[1];
-                meteringRectangleArr[0] = meteringRectangle;
-                mPreviewBuilder.set(CaptureRequest.CONTROL_AF_REGIONS, meteringRectangleArr);
-                mPreviewBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START);
-                updatePreview();
+            case R.id.btn_effect:
+                ListView lv = new ListView(getActivity());
+                lv.setBackgroundColor(44000000);
+                SimpleAdapter listItemAdapter = EffectAdapter.getAdapter(getActivity());
+                lv.setAdapter(listItemAdapter);
+                PopupWindow window = createPopupWindow(getActivity(), lv);
+                lv.setOnItemClickListener(new EffectItemClickListener(mPreviewBuilder, mCameraCaptureSession, mHandler, window));
+                int xoff = window.getWidth() / 2 - mBtnEffect.getWidth() / 2;
+                window.update();
+                window.showAsDropDown(mBtnEffect, -xoff, 0);
                 break;
-            case MotionEvent.ACTION_UP:
+            case R.id.btn_flash:
+                ListView lv2 = new ListView(getActivity());
+                lv2.setBackgroundColor(44000000);
+                SimpleAdapter listItemAdapter2 = FlashAdapter.getAdapter(getActivity());
+                lv2.setAdapter(listItemAdapter2);
+                PopupWindow window2 = createPopupWindow(getActivity(), lv2);
+                lv2.setOnItemClickListener(new FlashItemClickListener(mPreviewBuilder, mCameraCaptureSession, mHandler, window2, mBtnFlash));
+                int xoff2 = window2.getWidth() / 2 - mBtnFlash.getWidth() / 2;
+                window2.update();
+                window2.showAsDropDown(mBtnFlash, -xoff2, 0);
                 break;
         }
-        return true;
     }
-
-    /**
-     * 触摸对焦的计算
-     *
-     * @param x
-     * @param min
-     * @param max
-     * @return
-     */
-    private int clamp(int x, int min, int max) {
-        if (x < min) {
-            return min;
-        } else if (x > max) {
-            return max;
-        } else {
-            return x;
-        }
-    }
-
 
     /**
      * 基于区域来比较两个Size
      */
-    static class CompareSizesByArea implements Comparator<Size> {
+    class CompareSizesByArea implements Comparator<Size> {
 
         @Override
         public int compare(Size lhs, Size rhs) {
@@ -886,8 +863,8 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
             }
             switch (seekBar.getId()) {
                 case R.id.sb_focus:
-                    mPreviewBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, (float) (i / 10));
-                    valueAF = (float) (i / 10);
+                    mPreviewBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, (float) ((float) i / 10.0));
+                    valueAF = (float) ((float) i / 10.0);
                     mTextView.setText("聚焦：" + valueAF);
                     break;
                 case R.id.sb_ae:
@@ -949,113 +926,6 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
     }
 
     /**
-     * Awb的seekbar
-     */
-    class MyAwbSeekBarChangedListener implements AwbSeekBar.OnAwbSeekBarChangeListener {
-
-        @Override
-        public void doInProgress1() {
-            mTextView.setText("自动");
-            mPreviewBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_AUTO);
-            updatePreview();
-        }
-
-        @Override
-        public void doInProgress2() {
-            mTextView.setText("多云");
-            mPreviewBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT);
-            updatePreview();
-        }
-
-        @Override
-        public void doInProgress3() {
-            mTextView.setText("白天");
-            mPreviewBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_DAYLIGHT);
-            updatePreview();
-        }
-
-        @Override
-        public void doInProgress4() {
-            mTextView.setText("日光灯");
-            mPreviewBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_FLUORESCENT);
-            updatePreview();
-        }
-
-        @Override
-        public void doInProgress5() {
-            mTextView.setText("白炽灯");
-            mPreviewBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_INCANDESCENT);
-            updatePreview();
-        }
-
-        @Override
-        public void doInProgress6() {
-            mTextView.setText("阴影");
-            mPreviewBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_SHADE);
-            updatePreview();
-        }
-
-        @Override
-        public void doInProgress7() {
-            mTextView.setText("黄昏");
-            mPreviewBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_TWILIGHT);
-            updatePreview();
-        }
-
-        @Override
-        public void doInProgress8() {
-            mTextView.setText("暖光");
-            mPreviewBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_WARM_FLUORESCENT);
-            updatePreview();
-        }
-
-        @Override
-        public void onStopTrackingTouch(int num) {
-            mTextView.setVisibility(View.INVISIBLE);
-            switch (num) {
-                case 0:
-                    mTextView.setText("自动");
-                    mPreviewBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_AUTO);
-                    break;
-                case 10:
-                    mTextView.setText("多云");
-                    mPreviewBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT);
-                    break;
-                case 20:
-                    mTextView.setText("白天");
-                    mPreviewBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_DAYLIGHT);
-                    break;
-                case 30:
-                    mTextView.setText("日光灯");
-                    mPreviewBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_FLUORESCENT);
-                    break;
-                case 40:
-                    mTextView.setText("白炽灯");
-                    mPreviewBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_INCANDESCENT);
-                    break;
-                case 50:
-                    mTextView.setText("阴影");
-                    mPreviewBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_SHADE);
-                    break;
-                case 60:
-                    mTextView.setText("黄昏");
-                    mPreviewBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_TWILIGHT);
-                    break;
-                case 70:
-                    mTextView.setText("暖光");
-                    mPreviewBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_WARM_FLUORESCENT);
-                    break;
-            }
-            updatePreview();
-        }
-
-        @Override
-        public void onStartTrackingTouch(SeekBar seekBar) {
-            mTextView.setVisibility(View.VISIBLE);
-        }
-    }
-
-    /**
      * switch的监听器
      */
     class MyOnCheckedChangeListener implements CompoundButton.OnCheckedChangeListener {
@@ -1069,7 +939,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
             switch (buttonView.getId()) {
                 case R.id.switch_focus:
                     if (isChecked) {
-                        mPreviewBuilder.set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_AUTO);
+                        mPreviewBuilder.set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_EDOF);
                         mLayoutAf.getChildAt(1).setEnabled(false);
                     } else {
                         mPreviewBuilder.set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_OFF);
@@ -1129,5 +999,22 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
         }
     }
 
+    /**
+     * 创建一个包含自定义view的PopupWindow
+     *
+     * @param cx
+     * @return
+     */
+    private PopupWindow createPopupWindow(Context cx, ListView lv) {
+        PopupWindow window = new PopupWindow(cx);
+        window.setContentView(lv);
+        Resources res = cx.getResources();
+        window.setWidth(res.getDimensionPixelOffset(R.dimen.popupwindow_width));
+        window.setHeight(res.getDimensionPixelOffset(R.dimen.popupwindow_height) * (lv.getAdapter().getCount()));
+        window.setFocusable(true); //设置PopupWindow可获得焦点
+        window.setTouchable(true); //设置PopupWindow可触摸
+        window.setOutsideTouchable(true); //设置非PopupWindow区域可触摸
+        return window;
+    }
 
 }
