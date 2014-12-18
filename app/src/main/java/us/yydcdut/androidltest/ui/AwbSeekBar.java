@@ -66,7 +66,7 @@ public class AwbSeekBar extends SeekBar {
 
             @Override
             public void onStartTrackingTouch(SeekBar seekBar) {
-
+                mOnAwbSeekBarChangeListener.onStartTrackingTouch(seekBar);
             }
 
             @Override
@@ -122,6 +122,8 @@ public class AwbSeekBar extends SeekBar {
         public abstract void doInProgress8();
 
         public abstract void onStopTrackingTouch(int num);
+
+        public abstract void onStartTrackingTouch(SeekBar seekBar);
     }
 
 }

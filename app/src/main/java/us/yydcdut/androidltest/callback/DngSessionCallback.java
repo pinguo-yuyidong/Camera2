@@ -39,6 +39,7 @@ public class DngSessionCallback extends CameraCaptureSession.CaptureCallback {
     @Override
     public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
         super.onCaptureCompleted(session, request, result);
+        Log.i("DngSessionCallback", "onCaptureCompleted,,,,onCaptureCompleted,,,,onCaptureCompleted");
         mHandler.post(new DngRunnable(result));
     }
 

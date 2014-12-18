@@ -16,7 +16,6 @@ import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
-import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.MeteringRectangle;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.ImageReader;
@@ -25,7 +24,6 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
 import android.util.Range;
-import android.util.Rational;
 import android.util.Size;
 import android.util.SparseIntArray;
 import android.view.LayoutInflater;
@@ -42,6 +40,7 @@ import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.SeekBar;
 import android.widget.Switch;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
@@ -54,6 +53,7 @@ import us.yydcdut.androidltest.JpegSaver;
 import us.yydcdut.androidltest.PreferenceHelper;
 import us.yydcdut.androidltest.R;
 import us.yydcdut.androidltest.callback.DngSessionCallback;
+import us.yydcdut.androidltest.callback.JpegSessionCallback;
 
 /**
  * Created by yuyidong on 14-12-4.
@@ -136,6 +136,14 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
      */
     private CameraCaptureSession mCameraCaptureSession;
     /**
+     * jpeg的拍照会话
+     */
+    private JpegSessionCallback mJpegSessionCallback;
+    /**
+     * dng的拍照会话
+     */
+    private DngSessionCallback mDngSessionCallback;
+    /**
      * 是否显示focus的按钮
      */
     private boolean showAfFlag = false;
@@ -174,7 +182,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
     /**
      * 拍照的layout
      */
-    private LinearLayout mLayoutCapture;
+    private RelativeLayout mLayoutCapture;
     /**
      * 存layout，方便再visible和invisible的时候取出来，注意位置
      */
@@ -187,7 +195,18 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
      * 显示的surface
      */
     private Surface surface;
+    /**
+     * seekbar中的数字那些的显示
+     */
+    private TextView mTextView;
+    //----------------------------seekbar的值-------------------------
+    //初始化的话是实用中间值
+    private float valueAF;
+    private int valueAE;
+    private long valueAETime;
+    private int valueISO;
 
+    //----------------------------seekbar的值-------------------------
     public DisplayFragment() {
     }
 
@@ -217,6 +236,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
         View v = inflater.inflate(R.layout.display_camera_frag, null);
         initUIAndListener(v);
         initAnimation();
+        initSeekBarValue();
         return v;
     }
 
@@ -239,6 +259,8 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
         mTextureView = (MyTextureView) v.findViewById(R.id.textureview);
         mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
         mTextureView.setmMyTextureViewTouchEvent(this);
+        mTextView = (TextView) v.findViewById(R.id.txt_sb_txt);
+        mTextView.setVisibility(View.INVISIBLE);
 
         mLayoutBottom = (RelativeLayout) v.findViewById(R.id.layout_bottom);
 
@@ -257,7 +279,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
         Switch switchIso = (Switch) v.findViewById(R.id.switch_iso);
         SeekBar sbIso = (SeekBar) v.findViewById(R.id.sb_iso);
 
-        mLayoutCapture = (LinearLayout) v.findViewById(R.id.layout_capture);
+        mLayoutCapture = (RelativeLayout) v.findViewById(R.id.layout_capture);
 
         ImageView btnSetting = (ImageView) v.findViewById(R.id.btn_setting);
         ImageView btnCapture = (ImageView) v.findViewById(R.id.btn_capture);
@@ -299,17 +321,24 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
         switchAf.setOnCheckedChangeListener(myOnClickChangeListener);
         switchAe.setOnCheckedChangeListener(myOnClickChangeListener);
         switchIso.setOnCheckedChangeListener(myOnClickChangeListener);
-
+        switchAf.setChecked(true);
+        switchAe.setChecked(true);
+        switchIso.setChecked(true);
         //seekbar
         MySeekBarListener listener = new MySeekBarListener();
         sbAf.setOnSeekBarChangeListener(listener);
         sbAe.setOnSeekBarChangeListener(listener);
         sbAwb.setmOnAwbSeekBarChangeListener(new MyAwbSeekBarChangedListener());
         sbIso.setOnSeekBarChangeListener(listener);
+        sbAf.setEnabled(false);
+        sbIso.setEnabled(false);
         //sbAwb.setOnSeekBarChangeListener(listener);
         sbAf.setMax(100);
         sbAe.setMax(100);
         sbIso.setMax(100);
+        sbAf.setProgress(50);
+        sbAe.setProgress(50);
+        sbIso.setProgress(50);
         //list ,add
         mLayoutList = new ArrayList<View>();
         mLayoutList.add(mLayoutBottom);//位置0
@@ -319,6 +348,15 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
         mLayoutList.add(mLayoutIso);//位置4
     }
 
+    /**
+     * 初始化seekbar上的一些参数
+     */
+    private void initSeekBarValue() {
+        valueAF = 5.0f;
+        valueAETime = (214735991 - 13231) / 2;
+        valueISO = (10000 - 100) / 2;
+        valueAE = 0;
+    }
 
     /**
      * 拍照
@@ -488,10 +526,6 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
         }
         //得到SurfaceTexture
         SurfaceTexture texture = mTextureView.getSurfaceTexture();
-        if (null == texture) {
-            Log.i("startPreview", "null == texture");
-            return;
-        }
         try {
             mPreviewBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             //设置默认的图像缓冲区的大小
@@ -500,8 +534,14 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
             surface = new Surface(texture);
             //TEMPLATE_PREVIEW--->创建一个请求适合相机预览窗口。
             mPreviewBuilder.addTarget(surface);
+            //初始化参数
+            initPreviewBuilder();
             //3A--->auto
             mPreviewBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
+            //3A
+            mPreviewBuilder.set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_AUTO);
+            mPreviewBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AF_MODE_AUTO);
+            mPreviewBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_AUTO);
             //创建拍照会话，一旦CameraCaptureSession创建,可以提交请求（capture、captureBurst,或setRepeatingBurst）。
             mState = STATE_PREVIEW;
             mCameraDevice.createCaptureSession(Arrays.asList(surface), mSessionStateCallback, mHandler);
@@ -511,7 +551,18 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
     }
 
     /**
-     * 换cameraID摄像头
+     * 初始化预览的builder，这样做是为了一来就调iso的时候ae不为最低
+     */
+    private void initPreviewBuilder() {
+        mPreviewBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_OFF);
+        mPreviewBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, valueAF);
+        mPreviewBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, valueAETime);
+        mPreviewBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, valueAE);
+        mPreviewBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, valueISO);
+    }
+
+    /**
+     * 换cameraID
      */
     private void reOpenCamera() {
         if (mCameraId.equals("1")) {
@@ -624,6 +675,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
             //Log.i("SurfaceTextureListener", "onSurfaceTextureUpdated");
         }
     };
+
     /**
      * 相机状态的回调
      * 再onOpened中打开相机
@@ -671,12 +723,13 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
                 } catch (Exception e) {
                     Log.e("onConfigured", "STATE_PREVIEW,,,Session has been closed; further changes are illegal.");
                     e.printStackTrace();
-//                    mCameraDevice.close();
-//                    try {
-//                        mCameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, mHandler);
-//                    } catch (CameraAccessException ee) {
-//                        ee.printStackTrace();
-//                    }
+                    Toast.makeText(getActivity(), "STATE_PREVIEW Exception e,now reopen camera.", Toast.LENGTH_SHORT).show();
+                    mCameraDevice.close();
+                    try {
+                        mCameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, mHandler);
+                    } catch (CameraAccessException ee) {
+                        ee.printStackTrace();
+                    }
                 }
             } else if (mState == STATE_CAPTURE) {
                 if (mFormat == ImageFormat.RAW_SENSOR) {
@@ -687,18 +740,19 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
                     }
                 } else {
                     try {
-                        cameraCaptureSession.setRepeatingRequest(mCaptureBuilder.build(), mSessionCaptureCallback, mHandler);
+                        cameraCaptureSession.setRepeatingRequest(mCaptureBuilder.build(), new JpegSessionCallback(), mHandler);
                     } catch (CameraAccessException e) {
                         e.printStackTrace();
                     } catch (Exception e) {
                         Log.e("onConfigured", "STATE_CAPTURE,,,Session has been closed; further changes are illegal.");
                         e.printStackTrace();
-//                        mCameraDevice.close();
-//                        try {
-//                            mCameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, mHandler);
-//                        } catch (CameraAccessException ee) {
-//                            ee.printStackTrace();
-//                        }
+                        Toast.makeText(getActivity(), "STATE_CAPTURE Exception e,now reopen camera.", Toast.LENGTH_SHORT).show();
+                        mCameraDevice.close();
+                        try {
+                            mCameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, mHandler);
+                        } catch (CameraAccessException ee) {
+                            ee.printStackTrace();
+                        }
                     }
                 }
             }
@@ -715,24 +769,6 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
             getActivity().getFragmentManager().beginTransaction().replace(R.id.frame_main, DisplayFragment.newInstance()).commit();
         }
     };
-
-    /**
-     * 拍照会话的回调
-     */
-    private CameraCaptureSession.CaptureCallback mSessionCaptureCallback = new CameraCaptureSession.CaptureCallback() {
-        @Override
-        public void onCaptureStarted(CameraCaptureSession session, CaptureRequest request, long timestamp, long frameNumber) {
-            Log.i("CameraCaptureSession.CaptureCallback", "onCaptureStarted");
-            super.onCaptureStarted(session, request, timestamp, frameNumber);
-        }
-
-        @Override
-        public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
-            Log.i("CameraCaptureSession.CaptureCallback", "onCaptureCompleted");
-            super.onCaptureCompleted(session, request, result);
-        }
-    };
-
 
     @Override
     public void onClick(View view) {
@@ -776,8 +812,6 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
     public boolean onAreaTouchEvent(MotionEvent event) {
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
-                break;
-            case MotionEvent.ACTION_UP:
                 //这里存折聚焦的left,right,top,bottm
                 Rect rect = mCameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
                 int areaSize = 200;
@@ -793,10 +827,6 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
                 rr = ((centerY * bottom) - areaSize) / viewHeight;
                 int focusLeft = clamp(ll, 0, right);
                 int focusBottom = clamp(rr, 0, bottom);
-//                Log.i("onAreaTouchEvent", "left--->" + left + ",,,right--->" + right + ",,,top--->" + top + ",,,bottom--->" + bottom);
-//                Log.i("onAreaTouchEvent", "mTextureView.getWidth()--->" + a + ",,,mTextureView.getHeight()--->" + b);
-//                Log.i("onAreaTouchEvent", "event.getX()--->" + centerX + ",,,event.getY()--->" + centerY);
-//                Log.i("onAreaTouchEvent", "ll--->" + ll + ",,,rr--->" + rr);
                 Log.i("focus_position", "focusLeft--->" + focusLeft + ",,,focusTop--->" + focusBottom + ",,,focusRight--->" + (focusLeft + areaSize) + ",,,focusBottom--->" + (focusBottom + areaSize));
                 newRect = new Rect(focusLeft, focusBottom, focusLeft + areaSize, focusBottom + areaSize);
                 MeteringRectangle meteringRectangle = new MeteringRectangle(newRect, 500);
@@ -805,6 +835,8 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
                 mPreviewBuilder.set(CaptureRequest.CONTROL_AF_REGIONS, meteringRectangleArr);
                 mPreviewBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START);
                 updatePreview();
+                break;
+            case MotionEvent.ACTION_UP:
                 break;
         }
         return true;
@@ -847,56 +879,49 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
      * seekbar的监听器
      */
     class MySeekBarListener implements SeekBar.OnSeekBarChangeListener {
-
         @Override
         public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-
+            if (mPreviewBuilder == null) {
+                return;
+            }
             switch (seekBar.getId()) {
                 case R.id.sb_focus:
-                    //AF--->ok   ???[0,10]
-                    //Log.i("onProgressChanged", "mCameraCharacteristics.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE)--->" + mCameraCharacteristics.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE));
-                    //float[] f = mCameraCharacteristics.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS);
-                    mPreviewBuilder.set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_OFF);
                     mPreviewBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, (float) (i / 10));
-                    //Log.i("onProgressChanged", "LENS_FOCUS_DISTANCE--->" + (i / 10));
+                    valueAF = (float) (i / 10);
+                    mTextView.setText("聚焦：" + valueAF);
                     break;
                 case R.id.sb_ae:
-                    //AE--->OK
-                    //这里AE太多会非常非常卡
-//                    Range<Long> range = mCameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE);
-//                    long max = range.getUpper();
-//                    long min = range.getLower();
-                    long max = 214735991;
-                    long min = 13231;
-                    Rational rational = mCameraCharacteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_STEP);
-                    int value = rational.intValue();
-                    Log.i("sb_ae", "rational.intValue()--->" + value);
-                    Range<Integer> range1 = mCameraCharacteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_RANGE);
-                    int maxmax = range1.getUpper();
-                    int minmin = range1.getLower();
-                    Log.i("sb_ae", "maxmax--->" + maxmax + ",,,,,,,minmin--->" + minmin);
-
-
-                    //这个范围差不多
-                    long ae = ((i * (max - min)) / 100 + min);
-                    mPreviewBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF);
-                    mPreviewBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, ae);
-//                    Log.i("onProgressChanged", "ae--->" + ae);
+                    Switch switchAE = (Switch) getView().findViewById(R.id.switch_ae);
+                    if (switchAE.isChecked()) {
+                        //曝光增益
+                        Range<Integer> range1 = mCameraCharacteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_RANGE);
+                        int maxmax = range1.getUpper();
+                        int minmin = range1.getLower();
+                        int all = (-minmin) + maxmax;
+                        int time = 100 / all;
+                        int ae = ((i / time) - maxmax) > maxmax ? maxmax : ((i / time) - maxmax) < minmin ? minmin : ((i / time) - maxmax);
+                        mPreviewBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, ae);
+                        mTextView.setText("曝光增益：" + ae);
+                        valueAE = ae;
+                    } else {
+                        //曝光时间
+                        Range<Long> range = mCameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE);
+                        long max = range.getUpper();
+                        long min = range.getLower();
+                        long ae = ((i * (max - min)) / 100 + min);
+                        mPreviewBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, ae);
+                        mTextView.setText("曝光时间：" + ae);
+                        valueAETime = ae;
+                    }
                     break;
                 case R.id.sb_iso:
-//                    mPreviewBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF);
                     Range<Integer> range = mCameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE);
                     int max1 = range.getUpper();//10000
                     int min1 = range.getLower();//100
-//                    int max2 = mCameraCharacteristics.get(CameraCharacteristics.SENSOR_MAX_ANALOG_SENSITIVITY);//800
-//                    Log.i("range", "max1--->" + max1 + ",,,min1--->" + min1 + ",,,max2--->" + max2);
                     int iso = ((i * (max1 - min1)) / 100 + min1);
-                    mPreviewBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF);
                     mPreviewBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, iso);
-
-//                    mCameraCharacteristics.get(CameraCharacteristics.)
-
-
+                    valueISO = iso;
+                    mTextView.setText("灵敏度：" + iso);
                     break;
             }
 //            float f = mCameraCharacteristics.get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM);
@@ -912,13 +937,15 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
 
         @Override
         public void onStartTrackingTouch(SeekBar seekBar) {
-
+            mTextView.setVisibility(View.VISIBLE);
         }
 
         @Override
         public void onStopTrackingTouch(SeekBar seekBar) {
-
+            mTextView.setVisibility(View.INVISIBLE);
         }
+
+
     }
 
     /**
@@ -928,81 +955,103 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
 
         @Override
         public void doInProgress1() {
+            mTextView.setText("自动");
             mPreviewBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_AUTO);
             updatePreview();
         }
 
         @Override
         public void doInProgress2() {
+            mTextView.setText("多云");
             mPreviewBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT);
             updatePreview();
         }
 
         @Override
         public void doInProgress3() {
+            mTextView.setText("白天");
             mPreviewBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_DAYLIGHT);
             updatePreview();
         }
 
         @Override
         public void doInProgress4() {
+            mTextView.setText("日光灯");
             mPreviewBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_FLUORESCENT);
             updatePreview();
         }
 
         @Override
         public void doInProgress5() {
+            mTextView.setText("白炽灯");
             mPreviewBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_INCANDESCENT);
             updatePreview();
         }
 
         @Override
         public void doInProgress6() {
+            mTextView.setText("阴影");
             mPreviewBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_SHADE);
             updatePreview();
         }
 
         @Override
         public void doInProgress7() {
+            mTextView.setText("黄昏");
             mPreviewBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_TWILIGHT);
             updatePreview();
         }
 
         @Override
         public void doInProgress8() {
+            mTextView.setText("暖光");
             mPreviewBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_WARM_FLUORESCENT);
             updatePreview();
         }
 
         @Override
         public void onStopTrackingTouch(int num) {
+            mTextView.setVisibility(View.INVISIBLE);
             switch (num) {
                 case 0:
+                    mTextView.setText("自动");
                     mPreviewBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_AUTO);
                     break;
                 case 10:
+                    mTextView.setText("多云");
                     mPreviewBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT);
                     break;
                 case 20:
+                    mTextView.setText("白天");
                     mPreviewBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_DAYLIGHT);
                     break;
                 case 30:
+                    mTextView.setText("日光灯");
                     mPreviewBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_FLUORESCENT);
                     break;
                 case 40:
+                    mTextView.setText("白炽灯");
                     mPreviewBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_INCANDESCENT);
                     break;
                 case 50:
+                    mTextView.setText("阴影");
                     mPreviewBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_SHADE);
                     break;
                 case 60:
+                    mTextView.setText("黄昏");
                     mPreviewBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_TWILIGHT);
                     break;
                 case 70:
+                    mTextView.setText("暖光");
                     mPreviewBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_WARM_FLUORESCENT);
                     break;
             }
             updatePreview();
+        }
+
+        @Override
+        public void onStartTrackingTouch(SeekBar seekBar) {
+            mTextView.setVisibility(View.VISIBLE);
         }
     }
 
@@ -1028,15 +1077,20 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
                     }
                     break;
                 case R.id.switch_ae:
+                    //AE是永远不会enable为false的
+                    Switch switchISO = (Switch) getView().findViewById(R.id.switch_iso);
+                    switchISO.setChecked(isChecked);
                     if (isChecked) {
                         mPreviewBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_ON);
-                        mLayoutAe.getChildAt(1).setEnabled(false);
+                        mLayoutIso.getChildAt(1).setEnabled(false);
                     } else {
                         mPreviewBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF);
-                        mLayoutAe.getChildAt(1).setEnabled(true);
+                        mLayoutIso.getChildAt(1).setEnabled(true);
                     }
                     break;
                 case R.id.switch_iso:
+                    Switch switchAE = (Switch) getView().findViewById(R.id.switch_ae);
+                    switchAE.setChecked(isChecked);
                     if (isChecked) {
                         mPreviewBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_ON);
                         mLayoutIso.getChildAt(1).setEnabled(false);
@@ -1046,6 +1100,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener, M
                     }
                     break;
             }
+            updatePreview();
         }
     }
 
