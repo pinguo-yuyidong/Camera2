@@ -12,6 +12,7 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.TextureView;
 
+import us.yydcdut.androidltest.callback.PreviewSessionCallback;
 import us.yydcdut.androidltest.ui.MyTextureView;
 
 /**
@@ -23,13 +24,15 @@ public class TextureViewTouchEvent implements MyTextureView.MyTextureViewTouchEv
     private CaptureRequest.Builder mPreviewBuilder;
     private CameraCaptureSession mCameraCaptureSession;
     private Handler mHandler;
+    private PreviewSessionCallback mPreviewSessionCallback;
 
-    public TextureViewTouchEvent(CameraCharacteristics mCameraCharacteristics, TextureView mTextureView, CaptureRequest.Builder mPreviewBuilder, CameraCaptureSession mCameraCaptureSession, Handler mHandler) {
+    public TextureViewTouchEvent(CameraCharacteristics mCameraCharacteristics, TextureView mTextureView, CaptureRequest.Builder mPreviewBuilder, CameraCaptureSession mCameraCaptureSession, Handler mHandler, PreviewSessionCallback mPreviewSessionCallback) {
         this.mCameraCharacteristics = mCameraCharacteristics;
         this.mTextureView = mTextureView;
         this.mPreviewBuilder = mPreviewBuilder;
         this.mCameraCaptureSession = mCameraCaptureSession;
         this.mHandler = mHandler;
+        this.mPreviewSessionCallback = mPreviewSessionCallback;
     }
 
     @Override
@@ -53,16 +56,19 @@ public class TextureViewTouchEvent implements MyTextureView.MyTextureViewTouchEv
                 Log.i("focus_position", "focusLeft--->" + focusLeft + ",,,focusTop--->" + focusBottom + ",,,focusRight--->" + (focusLeft + areaSize) + ",,,focusBottom--->" + (focusBottom + areaSize));
                 newRect = new Rect(focusLeft, focusBottom, focusLeft + areaSize, focusBottom + areaSize);
                 MeteringRectangle meteringRectangle = new MeteringRectangle(newRect, 500);
-                MeteringRectangle[] meteringRectangleArr = new MeteringRectangle[1];
-                meteringRectangleArr[0] = meteringRectangle;
+                MeteringRectangle[] meteringRectangleArr = {meteringRectangle};
                 mPreviewBuilder.set(CaptureRequest.CONTROL_AF_REGIONS, meteringRectangleArr);
                 mPreviewBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_CANCEL);
                 mPreviewBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START);
+                mPreviewBuilder.set(CaptureRequest.CONTROL_AE_REGIONS, meteringRectangleArr);
+                mPreviewBuilder.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CameraMetadata.CONTROL_AE_PRECAPTURE_TRIGGER_START);
                 updatePreview();
                 break;
             case MotionEvent.ACTION_UP:
-                float f = mCameraCharacteristics.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE);
-                Log.i("ACTION_UP", "LENS_INFO_MINIMUM_FOCUS_DISTANCE--->" + f);
+                int aeRegions = mCameraCharacteristics.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AE);
+                Log.i("ACTION_UP", "CONTROL_MAX_REGIONS_AE--->" + aeRegions);
+                int afRegions = mCameraCharacteristics.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AF);
+                Log.i("ACTION_UP", "CONTROL_MAX_REGIONS_AF--->" + afRegions);
                 break;
         }
         return true;
@@ -91,7 +97,7 @@ public class TextureViewTouchEvent implements MyTextureView.MyTextureViewTouchEv
      */
     private void updatePreview() {
         try {
-            mCameraCaptureSession.setRepeatingRequest(mPreviewBuilder.build(), null, mHandler);
+            mCameraCaptureSession.setRepeatingRequest(mPreviewBuilder.build(), mPreviewSessionCallback, mHandler);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         } catch (Exception e) {

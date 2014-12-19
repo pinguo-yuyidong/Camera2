@@ -18,9 +18,12 @@ import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.ImageReader;
+import android.media.MediaActionSound;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.Looper;
+import android.os.Message;
 import android.util.Log;
 import android.util.Range;
 import android.util.Size;
@@ -54,10 +57,12 @@ import java.util.List;
 import us.yydcdut.androidltest.JpegSaver;
 import us.yydcdut.androidltest.PreferenceHelper;
 import us.yydcdut.androidltest.R;
+import us.yydcdut.androidltest.SleepThread;
 import us.yydcdut.androidltest.adpater.EffectAdapter;
 import us.yydcdut.androidltest.adpater.FlashAdapter;
 import us.yydcdut.androidltest.callback.DngSessionCallback;
 import us.yydcdut.androidltest.callback.JpegSessionCallback;
+import us.yydcdut.androidltest.callback.PreviewSessionCallback;
 import us.yydcdut.androidltest.listener.AwbSeekBarChangeListener;
 import us.yydcdut.androidltest.listener.EffectItemClickListener;
 import us.yydcdut.androidltest.listener.FlashItemClickListener;
@@ -70,6 +75,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
     private static final int STATE_PREVIEW = 1;
     private static final int STATE_CAPTURE = 2;
     private int mState = 0;
+    public static final int FOCUS_DISAPPEAR = 100;
 
     private static final int SHOW_AF = 1;
     private static final int SHOW_AE = 2;
@@ -144,6 +150,10 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
      */
     private CameraCaptureSession mCameraCaptureSession;
     /**
+     * 用来focus的显示框框之类的
+     */
+    private PreviewSessionCallback mPreviewSessionCallback;
+    /**
      * 是否显示focus的按钮
      */
     private boolean showAfFlag = false;
@@ -200,6 +210,10 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
      */
     private TextView mTextView;
     /**
+     * awb 的seekbar
+     */
+    private AwbSeekBar mAwbSb;
+    /**
      * Effect 的 button
      */
     private ImageView mBtnEffect;
@@ -207,6 +221,14 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
      * flash的button
      */
     private ImageView mBtnFlash;
+    /**
+     * 拍照声音
+     */
+    private MediaActionSound mMediaActionSound;
+    /**
+     * focus的图
+     */
+    private ImageView mFocusImage;
     //----------------------------seekbar的值-------------------------
     //初始化的话是实用中间值
     private float valueAF;
@@ -215,6 +237,20 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
     private int valueISO;
 
     //----------------------------seekbar的值-------------------------
+    /**
+     * UI线程的handler
+     */
+    private Handler mMainHandler = new Handler(Looper.getMainLooper()) {
+        @Override
+        public void handleMessage(Message msg) {
+            super.handleMessage(msg);
+            switch (msg.what) {
+                case FOCUS_DISAPPEAR:
+                    mFocusImage.setVisibility(View.INVISIBLE);
+            }
+        }
+    };
+
     public DisplayFragment() {
     }
 
@@ -245,6 +281,8 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         initUIAndListener(v);
         initAnimation();
         initSeekBarValue();
+        initShutter();
+        initFocusImage();
         return v;
     }
 
@@ -270,6 +308,9 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         mTextView = (TextView) v.findViewById(R.id.txt_sb_txt);
         mTextView.setVisibility(View.INVISIBLE);
 
+        mFocusImage = (ImageView) v.findViewById(R.id.img_focus);
+        mFocusImage.setVisibility(View.GONE);
+
         mLayoutBottom = (RelativeLayout) v.findViewById(R.id.layout_bottom);
 
         mLayoutAf = (LinearLayout) v.findViewById(R.id.layout_focus);
@@ -281,7 +322,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         SeekBar sbAe = (SeekBar) v.findViewById(R.id.sb_ae);
 
         mLayoutAwb = (LinearLayout) v.findViewById(R.id.layout_awb);
-        AwbSeekBar sbAwb = (AwbSeekBar) v.findViewById(R.id.sb_awb);
+        mAwbSb = (AwbSeekBar) v.findViewById(R.id.sb_awb);
 
         mLayoutIso = (LinearLayout) v.findViewById(R.id.layout_iso);
         Switch switchIso = (Switch) v.findViewById(R.id.switch_iso);
@@ -290,7 +331,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         mLayoutCapture = (RelativeLayout) v.findViewById(R.id.layout_capture);
 
         ImageView btnSetting = (ImageView) v.findViewById(R.id.btn_setting);
-        ImageView btnCapture = (ImageView) v.findViewById(R.id.btn_capture);
+        final ImageView btnCapture = (ImageView) v.findViewById(R.id.btn_capture);
         ImageView btnChangeCamera = (ImageView) v.findViewById(R.id.btn_change_camera);
         ImageView btnFocus = (ImageView) v.findViewById(R.id.btn_focus);
         ImageView btnAe = (ImageView) v.findViewById(R.id.btn_ae);
@@ -304,6 +345,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
             public boolean onTouch(View view, MotionEvent event) {
                 switch (event.getAction()) {
                     case MotionEvent.ACTION_DOWN:
+                        btnCapture.setImageResource(R.drawable.btn_cam_pressed);
                         try {
                             takePicture();
                         } catch (CameraAccessException e) {
@@ -312,6 +354,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
                         Log.i("setOnTouchListener", "MotionEvent.ACTION_DOWN");
                         break;
                     case MotionEvent.ACTION_UP:
+                        btnCapture.setImageResource(R.drawable.btn_cam);
                         continuePreview();
                         Log.i("setOnTouchListener", "MotionEvent.ACTION_UP");
                         break;
@@ -340,11 +383,9 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         MySeekBarListener listener = new MySeekBarListener();
         sbAf.setOnSeekBarChangeListener(listener);
         sbAe.setOnSeekBarChangeListener(listener);
-        sbAwb.setmOnAwbSeekBarChangeListener(new AwbSeekBarChangeListener(mTextView, mPreviewBuilder, mCameraCaptureSession, mHandler));
         sbIso.setOnSeekBarChangeListener(listener);
         sbAf.setEnabled(false);
         sbIso.setEnabled(false);
-        //sbAwb.setOnSeekBarChangeListener(listener);
         sbAf.setMax(100);
         sbAe.setMax(100);
         sbIso.setMax(100);
@@ -358,6 +399,8 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         mLayoutList.add(mLayoutAe);//位置2
         mLayoutList.add(mLayoutAwb);//位置3
         mLayoutList.add(mLayoutIso);//位置4
+        //
+        mPreviewSessionCallback = new PreviewSessionCallback(mFocusImage, getActivity(), mMainHandler, mTextureView);
     }
 
     /**
@@ -368,6 +411,25 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         valueAETime = (214735991 - 13231) / 2;
         valueISO = (10000 - 100) / 2;
         valueAE = 0;
+    }
+
+    /**
+     * 初始化声音
+     */
+    private void initShutter() {
+        mMediaActionSound = new MediaActionSound();
+        mMediaActionSound.load(MediaActionSound.SHUTTER_CLICK);
+    }
+
+    /**
+     * 这样做是为了获得mFocusImage的高度和宽度
+     */
+    private void initFocusImage() {
+        RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
+        layoutParams.addRule(RelativeLayout.CENTER_IN_PARENT);
+        mFocusImage.setLayoutParams(layoutParams);
+        mFocusImage.setVisibility(View.VISIBLE);
+        new Thread(new SleepThread(mMainHandler, FOCUS_DISAPPEAR, 1500)).start();
     }
 
     /**
@@ -398,12 +460,38 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         //得到方向
         int rotation = getActivity().getWindowManager().getDefaultDisplay().getRotation();
         mCaptureBuilder.set(CaptureRequest.JPEG_ORIENTATION, ORIENTATIONS.get(rotation));
+        previewBuilder2CaptureBuilder();
         //开启保存JPEG图片的线程
         if (mFormat == ImageFormat.JPEG) {
             mHandler.post(new JpegSaver(mImageReader, mHandler, mFormat));
         }
         mState = STATE_CAPTURE;
         mCameraDevice.createCaptureSession(outputFurfaces, mSessionStateCallback, mHandler);
+    }
+
+    /**
+     * 将previewBuilder中修改的参数设置到captureBuilder中
+     */
+    private void previewBuilder2CaptureBuilder() {
+        //AWB
+        mCaptureBuilder.set(CaptureRequest.CONTROL_AWB_MODE, mPreviewBuilder.get(CaptureRequest.CONTROL_AWB_MODE));
+        //AE
+        if (mPreviewBuilder.get(CaptureRequest.CONTROL_AE_MODE) == CameraMetadata.CONTROL_AE_MODE_OFF) {
+            //曝光时间
+            mCaptureBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, mPreviewBuilder.get(CaptureRequest.SENSOR_EXPOSURE_TIME));
+        } else if (mPreviewBuilder.get(CaptureRequest.CONTROL_AE_MODE) == CameraMetadata.CONTROL_AE_MODE_ON) {
+            //曝光增益
+            mCaptureBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, mPreviewBuilder.get(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION));
+        }
+        //AF
+        if (mPreviewBuilder.get(CaptureRequest.CONTROL_AF_MODE) == CameraMetadata.CONTROL_AF_MODE_OFF) {
+            //手动聚焦的值
+            mCaptureBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, mPreviewBuilder.get(CaptureRequest.LENS_FOCUS_DISTANCE));
+        }
+        //effects
+        mCaptureBuilder.set(CaptureRequest.CONTROL_EFFECT_MODE, mPreviewBuilder.get(CaptureRequest.CONTROL_EFFECT_MODE));
+        //ISO
+        mCaptureBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, mPreviewBuilder.get(CaptureRequest.SENSOR_SENSITIVITY));
     }
 
     /**
@@ -591,7 +679,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
      */
     private void updatePreview() {
         try {
-            mCameraCaptureSession.setRepeatingRequest(mPreviewBuilder.build(), null, mHandler);
+            mCameraCaptureSession.setRepeatingRequest(mPreviewBuilder.build(), mPreviewSessionCallback, mHandler);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         } catch (Exception e) {
@@ -613,11 +701,12 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
     }
 
     /**
-     * 设置touch触摸聚焦监听器
+     * 设置焦监听器
      */
-    private void setTextureViewTouchListener() {
+    private void setListener() {
         //开始显示的时候将触摸变焦监听器设置了
-        mTextureView.setmMyTextureViewTouchEvent(new TextureViewTouchEvent(mCameraCharacteristics, mTextureView, mPreviewBuilder, mCameraCaptureSession, mHandler));
+        mTextureView.setmMyTextureViewTouchEvent(new TextureViewTouchEvent(mCameraCharacteristics, mTextureView, mPreviewBuilder, mCameraCaptureSession, mHandler, mPreviewSessionCallback));
+        mAwbSb.setmOnAwbSeekBarChangeListener(new AwbSeekBarChangeListener(mTextView, mPreviewBuilder, mCameraCaptureSession, mHandler, mPreviewSessionCallback));
     }
 
     @Override
@@ -730,15 +819,17 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
             if (mState == STATE_PREVIEW) {
                 try {
                     mCameraCaptureSession = cameraCaptureSession;
-                    setTextureViewTouchListener();
-                    cameraCaptureSession.setRepeatingRequest(mPreviewBuilder.build(), null, mHandler);
+                    setListener();
+                    cameraCaptureSession.setRepeatingRequest(mPreviewBuilder.build(), mPreviewSessionCallback, mHandler);
                 } catch (CameraAccessException e) {
                     e.printStackTrace();
                 } catch (Exception e) {
                     Log.e("onConfigured", "STATE_PREVIEW,,,Session has been closed; further changes are illegal.");
                     e.printStackTrace();
                     Toast.makeText(getActivity(), "STATE_PREVIEW Exception e,now reopen camera.", Toast.LENGTH_SHORT).show();
-                    mCameraDevice.close();
+                    if (mCameraDevice != null) {
+                        mCameraDevice.close();
+                    }
                     try {
                         mCameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, mHandler);
                     } catch (CameraAccessException ee) {
@@ -748,13 +839,13 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
             } else if (mState == STATE_CAPTURE) {
                 if (mFormat == ImageFormat.RAW_SENSOR) {
                     try {
-                        cameraCaptureSession.setRepeatingRequest(mCaptureBuilder.build(), new DngSessionCallback(getActivity(), mCameraId, mImageReader, mHandler), mHandler);
+                        cameraCaptureSession.setRepeatingRequest(mCaptureBuilder.build(), new DngSessionCallback(getActivity(), mCameraId, mImageReader, mHandler, mMediaActionSound), mHandler);
                     } catch (CameraAccessException e) {
                         e.printStackTrace();
                     }
                 } else {
                     try {
-                        cameraCaptureSession.setRepeatingRequest(mCaptureBuilder.build(), new JpegSessionCallback(), mHandler);
+                        cameraCaptureSession.setRepeatingRequest(mCaptureBuilder.build(), new JpegSessionCallback(mHandler, mMediaActionSound), mHandler);
                     } catch (CameraAccessException e) {
                         e.printStackTrace();
                     } catch (Exception e) {
@@ -775,10 +866,13 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         @Override
         public void onConfigureFailed(CameraCaptureSession cameraCaptureSession) {
             Log.i("CameraCaptureSession.StateCallback", "mSessionStateCallback--->onConfigureFailed");
-            Activity activity = getActivity();
-            if (null != activity) {
-                Toast.makeText(activity, "Failed!Reopen~", Toast.LENGTH_SHORT).show();
+            //丢弃掉所有在队列中的拍照的数据
+            try {
+                cameraCaptureSession.abortCaptures();
+            } catch (CameraAccessException e) {
+                e.printStackTrace();
             }
+            Toast.makeText(getActivity(), "Failed!Reopen~", Toast.LENGTH_SHORT).show();
             //因为尺寸问题可能导致开始时候配置失败，如果那样的话就不断的去开启直到成功
             getActivity().getFragmentManager().beginTransaction().replace(R.id.frame_main, DisplayFragment.newInstance()).commit();
         }
@@ -819,7 +913,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
                 SimpleAdapter listItemAdapter = EffectAdapter.getAdapter(getActivity());
                 lv.setAdapter(listItemAdapter);
                 PopupWindow window = createPopupWindow(getActivity(), lv);
-                lv.setOnItemClickListener(new EffectItemClickListener(mPreviewBuilder, mCameraCaptureSession, mHandler, window));
+                lv.setOnItemClickListener(new EffectItemClickListener(mPreviewBuilder, mCameraCaptureSession, mHandler, window, mPreviewSessionCallback));
                 int xoff = window.getWidth() / 2 - mBtnEffect.getWidth() / 2;
                 window.update();
                 window.showAsDropDown(mBtnEffect, -xoff, 0);
@@ -830,7 +924,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
                 SimpleAdapter listItemAdapter2 = FlashAdapter.getAdapter(getActivity());
                 lv2.setAdapter(listItemAdapter2);
                 PopupWindow window2 = createPopupWindow(getActivity(), lv2);
-                lv2.setOnItemClickListener(new FlashItemClickListener(mPreviewBuilder, mCameraCaptureSession, mHandler, window2, mBtnFlash));
+                lv2.setOnItemClickListener(new FlashItemClickListener(mPreviewBuilder, mCameraCaptureSession, mHandler, window2, mBtnFlash, mPreviewSessionCallback));
                 int xoff2 = window2.getWidth() / 2 - mBtnFlash.getWidth() / 2;
                 window2.update();
                 window2.showAsDropDown(mBtnFlash, -xoff2, 0);
@@ -858,7 +952,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
     class MySeekBarListener implements SeekBar.OnSeekBarChangeListener {
         @Override
         public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-            if (mPreviewBuilder == null) {
+            if (mPreviewBuilder == null || getView() == null) {
                 return;
             }
             switch (seekBar.getId()) {
@@ -933,7 +1027,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         @Override
         public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
             //翻转的时候mPreviewBuilder变为了null,会挂掉
-            if (mPreviewBuilder == null) {
+            if (mPreviewBuilder == null || getView() == null) {
                 return;
             }
             switch (buttonView.getId()) {
@@ -1016,5 +1110,6 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         window.setOutsideTouchable(true); //设置非PopupWindow区域可触摸
         return window;
     }
+
 
 }

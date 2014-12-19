@@ -12,6 +12,7 @@ import android.widget.ImageView;
 import android.widget.PopupWindow;
 
 import us.yydcdut.androidltest.R;
+import us.yydcdut.androidltest.callback.PreviewSessionCallback;
 
 /**
  * Created by yuyidong on 14-12-18.
@@ -22,13 +23,15 @@ public class FlashItemClickListener implements AdapterView.OnItemClickListener {
     private Handler mHandler;
     private PopupWindow mWindow;
     private ImageView mBtnFlash;
+    private PreviewSessionCallback mPreviewSessionCallback;
 
-    public FlashItemClickListener(CaptureRequest.Builder mPreviewBuilder, CameraCaptureSession mCameraCaptureSession, Handler mHandler, PopupWindow mWindow, ImageView mBtnFlash) {
+    public FlashItemClickListener(CaptureRequest.Builder mPreviewBuilder, CameraCaptureSession mCameraCaptureSession, Handler mHandler, PopupWindow mWindow, ImageView mBtnFlash, PreviewSessionCallback mPreviewSessionCallback) {
         this.mPreviewBuilder = mPreviewBuilder;
         this.mCameraCaptureSession = mCameraCaptureSession;
         this.mHandler = mHandler;
         this.mWindow = mWindow;
         this.mBtnFlash = mBtnFlash;
+        this.mPreviewSessionCallback = mPreviewSessionCallback;
     }
 
     @Override
@@ -60,7 +63,7 @@ public class FlashItemClickListener implements AdapterView.OnItemClickListener {
      */
     private void updatePreview() {
         try {
-            mCameraCaptureSession.setRepeatingRequest(mPreviewBuilder.build(), null, mHandler);
+            mCameraCaptureSession.setRepeatingRequest(mPreviewBuilder.build(), mPreviewSessionCallback, mHandler);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         } catch (Exception e) {

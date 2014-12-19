@@ -32,6 +32,7 @@ public class JpegSaver implements Runnable {
 
     @Override
     public void run() {
+        Log.i("JpegSaver", "JpegSaverJpegSaver");
         mImageReader.setOnImageAvailableListener(ReaderListener, mHandler);
     }
 
@@ -70,6 +71,7 @@ public class JpegSaver implements Runnable {
      * 判断父文件是否存在
      */
     private void checkParentDir() {
+        Log.i("JpegSaver", "checkParentDir");
         File dir = new File(Environment.getExternalStorageDirectory() + "/Android_L_Test/");
         if (!dir.exists()) {
             dir.mkdir();
@@ -80,6 +82,7 @@ public class JpegSaver implements Runnable {
      * 判断文件夹是否存在
      */
     private void checkJpegDir() {
+        Log.i("JpegSaver", "checkJpegDir");
         File dir = new File(Environment.getExternalStorageDirectory() + "/Android_L_Test/jpeg/");
         if (!dir.exists()) {
             dir.mkdir();
@@ -108,6 +111,7 @@ public class JpegSaver implements Runnable {
      * @throws IOException
      */
     private void save(byte[] bytes, File file) throws IOException {
+        Log.i("JpegSaver", "save");
         OutputStream os = null;
         try {
             os = new FileOutputStream(file);

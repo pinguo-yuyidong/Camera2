@@ -14,9 +14,9 @@
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
         android:layout_gravity="center"
-        android:layout_marginLeft="5dip"
         android:gravity="center"
         android:singleLine="true"
+        android:text="111111111"
         android:textColor="@android:color/white"
         android:textSize="15sp"/>
 

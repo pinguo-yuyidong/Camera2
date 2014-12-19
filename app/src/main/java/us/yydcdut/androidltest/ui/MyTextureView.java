@@ -12,6 +12,7 @@ public class MyTextureView extends TextureView {
     private int mRatioWidth = 0;
     private int mRatioHeight = 0;
     private MyTextureViewTouchEvent mMyTextureViewTouchEvent;
+    private FocusPositionTouchEvent mFocusPositionTouchEvent;
 
     public MyTextureView(Context context) {
         super(context);
@@ -52,6 +53,7 @@ public class MyTextureView extends TextureView {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        mFocusPositionTouchEvent.getPosition(event);
         return mMyTextureViewTouchEvent.onAreaTouchEvent(event);
     }
 
@@ -59,8 +61,16 @@ public class MyTextureView extends TextureView {
         this.mMyTextureViewTouchEvent = myTextureViewTouchEvent;
     }
 
+    public void setmFocusPositionTouchEvent(FocusPositionTouchEvent mFocusPositionTouchEvent) {
+        this.mFocusPositionTouchEvent = mFocusPositionTouchEvent;
+    }
+
     public interface MyTextureViewTouchEvent {
         public boolean onAreaTouchEvent(MotionEvent event);
+    }
+
+    public interface FocusPositionTouchEvent {
+        public void getPosition(MotionEvent event);
     }
 
 }

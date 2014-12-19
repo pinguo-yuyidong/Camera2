@@ -10,6 +10,7 @@ import android.view.View;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
+import us.yydcdut.androidltest.callback.PreviewSessionCallback;
 import us.yydcdut.androidltest.ui.AwbSeekBar;
 
 /**
@@ -20,12 +21,14 @@ public class AwbSeekBarChangeListener implements AwbSeekBar.OnAwbSeekBarChangeLi
     private CaptureRequest.Builder mPreviewBuilder;
     private CameraCaptureSession mCameraCaptureSession;
     private Handler mHandler;
+    private PreviewSessionCallback mPreviewSessionCallback;
 
-    public AwbSeekBarChangeListener(TextView mTextView, CaptureRequest.Builder mPreviewBuilder, CameraCaptureSession mCameraCaptureSession, Handler mHandler) {
+    public AwbSeekBarChangeListener(TextView mTextView, CaptureRequest.Builder mPreviewBuilder, CameraCaptureSession mCameraCaptureSession, Handler mHandler, PreviewSessionCallback mPreviewSessionCallback) {
         this.mTextView = mTextView;
         this.mPreviewBuilder = mPreviewBuilder;
         this.mCameraCaptureSession = mCameraCaptureSession;
         this.mHandler = mHandler;
+        this.mPreviewSessionCallback = mPreviewSessionCallback;
     }
 
     @Override
@@ -134,7 +137,7 @@ public class AwbSeekBarChangeListener implements AwbSeekBar.OnAwbSeekBarChangeLi
      */
     private void updatePreview() {
         try {
-            mCameraCaptureSession.setRepeatingRequest(mPreviewBuilder.build(), null, mHandler);
+            mCameraCaptureSession.setRepeatingRequest(mPreviewBuilder.build(), mPreviewSessionCallback, mHandler);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         } catch (Exception e) {
