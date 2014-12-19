@@ -92,7 +92,7 @@ public class PreviewSessionCallback extends CameraCaptureSession.CaptureCallback
             case CameraMetadata.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED:
                 if (mFlagShowFocusImage == true) {
                     mFocusImage.setBackground(mContext.getDrawable(R.drawable.focus_failed));
-                    new Thread(new SleepThread(mHandler, DisplayFragment.FOCUS_DISAPPEAR, 800)).start();
+                    new Thread(new SleepThread(mHandler, DisplayFragment.FOCUS_DISAPPEAR, 1200)).start();
                     mFlagShowFocusImage = false;
                 }
                 break;
@@ -104,4 +104,5 @@ public class PreviewSessionCallback extends CameraCaptureSession.CaptureCallback
         mX = (int) event.getX();
         mY = (int) event.getY();
     }
+
 }

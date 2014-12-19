@@ -5,7 +5,9 @@ import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraManager;
+import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
+import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.DngCreator;
 import android.hardware.camera2.TotalCaptureResult;
 import android.media.ImageReader;
@@ -40,21 +42,30 @@ public class DngSessionCallback extends CameraCaptureSession.CaptureCallback {
     }
 
     @Override
-    public void onCaptureStarted(CameraCaptureSession session, CaptureRequest request, long timestamp, long frameNumber) {
-        super.onCaptureStarted(session, request, timestamp, frameNumber);
-        mHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                mMediaActionSound.play(MediaActionSound.SHUTTER_CLICK);
-            }
-        });
-    }
-
-    @Override
     public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
         super.onCaptureCompleted(session, request, result);
-        Log.i("DngSessionCallback", "onCaptureCompleted,,,,onCaptureCompleted,,,,onCaptureCompleted");
-        mHandler.post(new DngRunnable(result));
+        Log.i("DngSessionCallback", "onCaptureCompleted");
+        Integer afState = result.get(CaptureResult.CONTROL_AF_STATE);
+        Integer aeState = result.get(CaptureResult.CONTROL_AE_STATE);
+        if (afState == null || aeState == null) {
+            return;
+        }
+        Log.i("DngSessionCallback", "要开始进入了,,afState.intValue()--->" + afState.intValue());
+        //聚焦完成才能拍照
+        if (afState.intValue() == CameraMetadata.CONTROL_AF_STATE_FOCUSED_LOCKED || afState.intValue() == CameraMetadata.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED) {
+            Log.i("DngSessionCallback", "进去了一层,,aeState.intValue()--->" + aeState.intValue());
+            if (aeState.intValue() == CameraMetadata.CONTROL_AE_STATE_LOCKED || aeState == CameraMetadata.CONTROL_AE_STATE_PRECAPTURE || aeState == CameraMetadata.CONTROL_AE_STATE_FLASH_REQUIRED) {
+                Log.i("DngSessionCallback", "进去了两层");
+                mHandler.post(new DngRunnable(result));
+                mHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        mMediaActionSound.play(MediaActionSound.SHUTTER_CLICK);
+                    }
+                });
+            }
+        }
+
     }
 
     class DngRunnable implements Runnable {
@@ -89,13 +100,16 @@ public class DngSessionCallback extends CameraCaptureSession.CaptureCallback {
         }
 
         private File createFile() {
-            File dir = new File(Environment.getExternalStorageDirectory() + "/Android_L_Test/dng/");
+            File dir = new File(Environment.getExternalStorageDirectory() + "/Android_L_Test/");
             if (!dir.exists()) {
                 dir.mkdir();
             }
             long time = System.currentTimeMillis();
             int random = new Random().nextInt(1000);
             File dir1 = new File(Environment.getExternalStorageDirectory() + "/Android_L_Test/dng/");
+            if (!dir1.exists()) {
+                dir1.mkdir();
+            }
             File meidaFile = new File(dir1, time + "_" + random + ".dng");
             return meidaFile;
         }

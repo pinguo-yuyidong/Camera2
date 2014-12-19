@@ -54,7 +54,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
-import us.yydcdut.androidltest.JpegSaver;
 import us.yydcdut.androidltest.PreferenceHelper;
 import us.yydcdut.androidltest.R;
 import us.yydcdut.androidltest.SleepThread;
@@ -443,7 +442,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         int sizeWidth = mSp.getInt("format_" + mFormat + "_pictureSize_width", 1280);
         int sizeHeight = mSp.getInt("format_" + mFormat + "_pictureSize_height", 960);
         //得到ImageReader对象,5为maxImage，放入队列里面的最大连拍张数(应该是这个意思)
-        mImageReader = ImageReader.newInstance(sizeWidth, sizeHeight, mFormat, 5);
+        mImageReader = ImageReader.newInstance(sizeWidth, sizeHeight, mFormat, 2);
         //得到surface
         List<Surface> outputFurfaces = new ArrayList<Surface>(2);
         outputFurfaces.add(mImageReader.getSurface());
@@ -463,7 +462,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         previewBuilder2CaptureBuilder();
         //开启保存JPEG图片的线程
         if (mFormat == ImageFormat.JPEG) {
-            mHandler.post(new JpegSaver(mImageReader, mHandler, mFormat));
+//            mHandler.post(new JpegSaver(mImageReader, mHandler, mFormat));
         }
         mState = STATE_CAPTURE;
         mCameraDevice.createCaptureSession(outputFurfaces, mSessionStateCallback, mHandler);
@@ -492,6 +491,12 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         mCaptureBuilder.set(CaptureRequest.CONTROL_EFFECT_MODE, mPreviewBuilder.get(CaptureRequest.CONTROL_EFFECT_MODE));
         //ISO
         mCaptureBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, mPreviewBuilder.get(CaptureRequest.SENSOR_SENSITIVITY));
+        //AF REGIONS
+        mCaptureBuilder.set(CaptureRequest.CONTROL_AF_REGIONS, mPreviewBuilder.get(CaptureRequest.CONTROL_AF_REGIONS));
+        mCaptureBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AE_PRECAPTURE_TRIGGER_START);
+        //AE REGIONS
+        mCaptureBuilder.set(CaptureRequest.CONTROL_AE_REGIONS, mPreviewBuilder.get(CaptureRequest.CONTROL_AE_REGIONS));
+        mCaptureBuilder.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CameraMetadata.CONTROL_AE_PRECAPTURE_TRIGGER_START);
     }
 
     /**
@@ -845,7 +850,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
                     }
                 } else {
                     try {
-                        cameraCaptureSession.setRepeatingRequest(mCaptureBuilder.build(), new JpegSessionCallback(mHandler, mMediaActionSound), mHandler);
+                        cameraCaptureSession.setRepeatingRequest(mCaptureBuilder.build(), new JpegSessionCallback(mHandler, mMediaActionSound, mImageReader), mHandler);
                     } catch (CameraAccessException e) {
                         e.printStackTrace();
                     } catch (Exception e) {
