@@ -57,6 +57,13 @@
             android:background="@drawable/btn_iso"/>
 
         <ImageView
+            android:id="@+id/btn_zoom"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:background="@drawable/btn_zoom"/>
+
+        <ImageView
             android:id="@+id/btn_effect"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -70,14 +77,13 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:layout_marginLeft="5dip"
             android:background="@drawable/btn_flash_off"/>
 
         <ImageView
             android:id="@+id/btn_change_camera"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="5dip"
+            android:layout_gravity="center"
             android:background="@drawable/btn_change_camera"/>
 
     </LinearLayout>
@@ -171,6 +177,25 @@
 
             <SeekBar
                 android:id="@+id/sb_ae"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginTop="5dip"
+                android:gravity="center"/>
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/layout_zoom"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:layout_centerVertical="true"
+            android:orientation="vertical"
+            android:visibility="invisible">
+
+            <SeekBar
+                android:id="@+id/sb_zoom"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"

@@ -26,8 +26,8 @@ public class PreviewSessionCallback extends CameraCaptureSession.CaptureCallback
     private ImageView mFocusImage;
     private Context mContext;
     private Handler mHandler;
-    private int mX;
-    private int mY;
+    private int mRawX;
+    private int mRawY;
     private boolean mFlagShowFocusImage = false;
 
     public PreviewSessionCallback(ImageView mFocusImage, Context mContext, Handler mHandler, MyTextureView mMyTextureView) {
@@ -67,7 +67,7 @@ public class PreviewSessionCallback extends CameraCaptureSession.CaptureCallback
                 int height = mFocusImage.getHeight();
                 //居中
                 ViewGroup.MarginLayoutParams margin = new ViewGroup.MarginLayoutParams(mFocusImage.getLayoutParams());
-                margin.setMargins(mX - width / 2, mY - height / 2, margin.rightMargin, margin.bottomMargin);
+                margin.setMargins(mRawX - width / 2, mRawY - height / 2, margin.rightMargin, margin.bottomMargin);
                 RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(margin);
                 mFocusImage.setLayoutParams(layoutParams);
                 //显示
@@ -101,8 +101,8 @@ public class PreviewSessionCallback extends CameraCaptureSession.CaptureCallback
 
     @Override
     public void getPosition(MotionEvent event) {
-        mX = (int) event.getX();
-        mY = (int) event.getY();
+        mRawX = (int) event.getRawX();
+        mRawY = (int) event.getRawY();
     }
 
 }

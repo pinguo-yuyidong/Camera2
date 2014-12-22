@@ -7,6 +7,7 @@ import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
@@ -34,6 +35,7 @@ import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.view.animation.TranslateAnimation;
 import android.widget.CompoundButton;
@@ -80,6 +82,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
     private static final int SHOW_AE = 2;
     private static final int SHOW_AWB = 3;
     private static final int SHOW_ISO = 4;
+    private static final int SHOW_ZOOM = 5;
 
     private SharedPreferences mSp;
     private SharedPreferences.Editor mEditor;
@@ -165,17 +168,9 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
      */
     private boolean showAeFlag = false;
     /**
-     * ae的layout
-     */
-    private LinearLayout mLayoutAe;
-    /**
      * 是否显示Awb的按钮
      */
     private boolean showAwbFlag = false;
-    /**
-     * awb的layout
-     */
-    private LinearLayout mLayoutAwb;
     /**
      * 是否显示iso的按钮
      */
@@ -184,6 +179,10 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
      * iso的layout
      */
     private LinearLayout mLayoutIso;
+    /**
+     * 是否显示zoom的按钮
+     */
+    private boolean showZoomFlag = false;
     /**
      * 底部的layout
      */
@@ -254,8 +253,8 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
     }
 
     public static DisplayFragment newInstance() {
-        DisplayFragment displayFregment = new DisplayFragment();
-        return displayFregment;
+        DisplayFragment displayFragment = new DisplayFragment();
+        return displayFragment;
     }
 
     @Override
@@ -267,7 +266,6 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         } else {
             mCameraId = PreferenceHelper.getCurrentCameraid(getActivity());
         }
-        Log.i("mCameraId", "mCameraId--->" + mCameraId);
         //初始化sharedPreference
         mSp = getActivity().getSharedPreferences("currentcamera" + mCameraId, Context.MODE_PRIVATE);
         mEditor = mSp.edit();
@@ -316,16 +314,19 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         Switch switchAf = (Switch) v.findViewById(R.id.switch_focus);
         SeekBar sbAf = (SeekBar) v.findViewById(R.id.sb_focus);
 
-        mLayoutAe = (LinearLayout) v.findViewById(R.id.layout_ae);
+        LinearLayout layoutAe = (LinearLayout) v.findViewById(R.id.layout_ae);
         Switch switchAe = (Switch) v.findViewById(R.id.switch_ae);
         SeekBar sbAe = (SeekBar) v.findViewById(R.id.sb_ae);
 
-        mLayoutAwb = (LinearLayout) v.findViewById(R.id.layout_awb);
+        LinearLayout layoutAwb = (LinearLayout) v.findViewById(R.id.layout_awb);
         mAwbSb = (AwbSeekBar) v.findViewById(R.id.sb_awb);
 
         mLayoutIso = (LinearLayout) v.findViewById(R.id.layout_iso);
         Switch switchIso = (Switch) v.findViewById(R.id.switch_iso);
         SeekBar sbIso = (SeekBar) v.findViewById(R.id.sb_iso);
+
+        LinearLayout layoutZoom = (LinearLayout) v.findViewById(R.id.layout_zoom);
+        SeekBar sbZoom = (SeekBar) v.findViewById(R.id.sb_zoom);
 
         mLayoutCapture = (RelativeLayout) v.findViewById(R.id.layout_capture);
 
@@ -336,6 +337,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         ImageView btnAe = (ImageView) v.findViewById(R.id.btn_ae);
         ImageView btnAwb = (ImageView) v.findViewById(R.id.btn_awb);
         ImageView btnIso = (ImageView) v.findViewById(R.id.btn_iso);
+        ImageView btnzoom = (ImageView) v.findViewById(R.id.btn_zoom);
         mBtnEffect = (ImageView) v.findViewById(R.id.btn_effect);
         mBtnFlash = (ImageView) v.findViewById(R.id.btn_flash);
 
@@ -368,6 +370,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         btnAe.setOnClickListener(this);
         btnAwb.setOnClickListener(this);
         btnIso.setOnClickListener(this);
+        btnzoom.setOnClickListener(this);
         mBtnEffect.setOnClickListener(this);
         mBtnFlash.setOnClickListener(this);
         //switch
@@ -383,23 +386,25 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         sbAf.setOnSeekBarChangeListener(listener);
         sbAe.setOnSeekBarChangeListener(listener);
         sbIso.setOnSeekBarChangeListener(listener);
+        sbZoom.setOnSeekBarChangeListener(listener);
         sbAf.setEnabled(false);
         sbIso.setEnabled(false);
         sbAf.setMax(100);
         sbAe.setMax(100);
         sbIso.setMax(100);
+        sbZoom.setMax(100);
         sbAf.setProgress(50);
         sbAe.setProgress(50);
         sbIso.setProgress(50);
+        sbZoom.setProgress(0);
         //list ,add
         mLayoutList = new ArrayList<View>();
         mLayoutList.add(mLayoutBottom);//位置0
         mLayoutList.add(mLayoutAf);//位置1
-        mLayoutList.add(mLayoutAe);//位置2
-        mLayoutList.add(mLayoutAwb);//位置3
+        mLayoutList.add(layoutAe);//位置2
+        mLayoutList.add(layoutAwb);//位置3
         mLayoutList.add(mLayoutIso);//位置4
-        //
-        mPreviewSessionCallback = new PreviewSessionCallback(mFocusImage, getActivity(), mMainHandler, mTextureView);
+        mLayoutList.add(layoutZoom);//位置5
     }
 
     /**
@@ -461,9 +466,9 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         mCaptureBuilder.set(CaptureRequest.JPEG_ORIENTATION, ORIENTATIONS.get(rotation));
         previewBuilder2CaptureBuilder();
         //开启保存JPEG图片的线程
-        if (mFormat == ImageFormat.JPEG) {
+//        if (mFormat == ImageFormat.JPEG) {
 //            mHandler.post(new JpegSaver(mImageReader, mHandler, mFormat));
-        }
+//        }
         mState = STATE_CAPTURE;
         mCameraDevice.createCaptureSession(outputFurfaces, mSessionStateCallback, mHandler);
     }
@@ -515,47 +520,90 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
     private void openCamera(int viewWidth, int viewHeight) throws CameraAccessException {
         //获得camera服务
         mCameraManager = (CameraManager) getActivity().getSystemService(Context.CAMERA_SERVICE);
-        setUpCameraOutputs(viewWidth, viewHeight);
+        setUpCameraOutputs();
         configureTransform(viewWidth, viewHeight);
         //打开相机
         mCameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, mHandler);
+        newPreviewSession();
+    }
+
+    /**
+     * 生成PreviewSession对象
+     */
+    private void newPreviewSession() {
+        mPreviewSessionCallback = new PreviewSessionCallback(mFocusImage, getActivity(), mMainHandler, mTextureView);
     }
 
     /**
      * 得到CameraCharacteristics等信息，设置显示大小
      *
-     * @param viewWidth
-     * @param viewHeight
      * @throws CameraAccessException
      */
-    private void setUpCameraOutputs(int viewWidth, int viewHeight) throws CameraAccessException {
+    private void setUpCameraOutputs() throws CameraAccessException {
         //描述CameraDevice属性
         mCameraCharacteristics = mCameraManager.getCameraCharacteristics(mCameraId);
         //流配置
         StreamConfigurationMap map = mCameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+        Size[] sizes = map.getOutputSizes(SurfaceTexture.class);
         //适合SurfaceTexture的显示的size
-//        Size largest = Collections.max(Arrays.asList(map.getOutputSizes(ImageFormat.JPEG)), new CompareSizesByArea());
-//        mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), viewWidth, viewHeight, largest);
-//        int orientation = getResources().getConfiguration().orientation;
-//        if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
-//            mTextureView.fitWindow(
-//                    mPreviewSize.getWidth(), mPreviewSize.getHeight());
-//        } else {
-//            mTextureView.fitWindow(
-//                    mPreviewSize.getHeight(), mPreviewSize.getWidth());
-//        }
-//        if (mCameraId.equals("0")) {
-        mPreviewSize = map.getOutputSizes(SurfaceTexture.class)[0];
-//        } else {
-//            mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), viewWidth, viewHeight, largest);
-//            // 选择适合TextureView的长宽比的大小预览
+        mPreviewSize = findSuitableSize(sizes);
 //        int orientation = getResources().getConfiguration().orientation;
 //        if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
 //            mTextureView.fitWindow(mPreviewSize.getWidth(), mPreviewSize.getHeight());
 //        } else {
 //            mTextureView.fitWindow(mPreviewSize.getHeight(), mPreviewSize.getWidth());
 //        }
-//        }
+    }
+
+    /**
+     * 跟屏幕一个尺寸才是最合适的，或者小于屏幕尺寸
+     *
+     * @param sizes
+     * @return
+     */
+    private Size findSuitableSize(Size[] sizes) {
+        Size mostSuitableSize = null;
+        List<Size> list = new ArrayList<Size>();
+        WindowManager windowManager = (WindowManager) getActivity().getSystemService(Context.WINDOW_SERVICE);
+        int width = windowManager.getDefaultDisplay().getWidth();
+        int height = windowManager.getDefaultDisplay().getHeight();
+        //以最小边来适配
+        if (width < height) {
+            for (Size size : sizes) {
+                if ((size.getWidth() == width) && (size.getHeight() == height)) {
+                    mostSuitableSize = new Size(width, height);
+                }
+                if (width >= size.getWidth()) {
+                    list.add(size);
+                }
+            }
+        } else {
+            for (Size size : sizes) {
+                if ((size.getWidth() == width) && (size.getHeight() == height)) {
+                    mostSuitableSize = new Size(width, height);
+                }
+                if (height >= size.getHeight()) {
+                    list.add(size);
+                }
+            }
+        }
+        if (mostSuitableSize != null) {
+            return mostSuitableSize;
+        } else if (list.size() > 0) {
+            return Collections.max(list, new CompareSizesByArea());
+        } else {
+            return sizes[0];
+        }
+    }
+
+    private class CompareSizesByArea implements Comparator<Size> {
+
+        @Override
+        public int compare(Size lhs, Size rhs) {
+            return Long.signum((long) lhs.getWidth() * lhs.getHeight() -
+                    (long) rhs.getWidth() * rhs.getHeight());
+        }
+
     }
 
     /**
@@ -585,35 +633,6 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
             matrix.postRotate(90 * (rotation - 2), centerX, centerY);
         }
         mTextureView.setTransform(matrix);
-    }
-
-    /**
-     * 得到最合适屏幕显示的尺寸
-     *
-     * @param choices
-     * @param viewWidth
-     * @param viewHeight
-     * @param aspectRatio
-     * @return
-     */
-    private Size chooseOptimalSize(Size[] choices, int viewWidth, int viewHeight, Size aspectRatio) {
-        // Collect the supported resolutions that are at least as big as the preview Surface
-        List<Size> bigEnough = new ArrayList<Size>();
-        int w = aspectRatio.getWidth();
-        int h = aspectRatio.getHeight();
-        for (Size option : choices) {
-            if (option.getHeight() == option.getWidth() * h / w &&
-                    option.getWidth() >= viewWidth && option.getHeight() >= viewHeight) {
-                bigEnough.add(option);
-            }
-        }
-        // Pick the smallest of those, assuming we found any
-        if (bigEnough.size() > 0) {
-            return Collections.min(bigEnough, new CompareSizesByArea());
-        } else {
-            Log.e("CameraFragment", "Couldn't find any suitable preview size");
-            return choices[0];
-        }
     }
 
     /**
@@ -661,6 +680,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
      * 换cameraID
      */
     private void reOpenCamera() {
+        mFocusImage.setVisibility(View.INVISIBLE);
         if (mCameraId.equals("1")) {
             mCameraId = "0";
         } else if (mCameraId.equals("0")) {
@@ -707,6 +727,8 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
 
     /**
      * 设置焦监听器
+     * TextureView的touch
+     * awbseekbar的change
      */
     private void setListener() {
         //开始显示的时候将触摸变焦监听器设置了
@@ -857,6 +879,9 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
                         Log.e("onConfigured", "STATE_CAPTURE,,,Session has been closed; further changes are illegal.");
                         e.printStackTrace();
                         Toast.makeText(getActivity(), "STATE_CAPTURE Exception e,now reopen camera.", Toast.LENGTH_SHORT).show();
+                        if (mCameraDevice == null) {
+                            return;
+                        }
                         mCameraDevice.close();
                         try {
                             mCameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, mHandler);
@@ -872,11 +897,6 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         public void onConfigureFailed(CameraCaptureSession cameraCaptureSession) {
             Log.i("CameraCaptureSession.StateCallback", "mSessionStateCallback--->onConfigureFailed");
             //丢弃掉所有在队列中的拍照的数据
-            try {
-                cameraCaptureSession.abortCaptures();
-            } catch (CameraAccessException e) {
-                e.printStackTrace();
-            }
             Toast.makeText(getActivity(), "Failed!Reopen~", Toast.LENGTH_SHORT).show();
             //因为尺寸问题可能导致开始时候配置失败，如果那样的话就不断的去开启直到成功
             getActivity().getFragmentManager().beginTransaction().replace(R.id.frame_main, DisplayFragment.newInstance()).commit();
@@ -934,27 +954,17 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
                 window2.update();
                 window2.showAsDropDown(mBtnFlash, -xoff2, 0);
                 break;
+            case R.id.btn_zoom:
+                showZoomFlag = !showZoomFlag;
+                showLayout(SHOW_ZOOM, showZoomFlag);
+                break;
         }
-    }
-
-    /**
-     * 基于区域来比较两个Size
-     */
-    class CompareSizesByArea implements Comparator<Size> {
-
-        @Override
-        public int compare(Size lhs, Size rhs) {
-            // We cast here to ensure the multiplications won't overflow
-            return Long.signum((long) lhs.getWidth() * lhs.getHeight() -
-                    (long) rhs.getWidth() * rhs.getHeight());
-        }
-
     }
 
     /**
      * seekbar的监听器
      */
-    class MySeekBarListener implements SeekBar.OnSeekBarChangeListener {
+    private class MySeekBarListener implements SeekBar.OnSeekBarChangeListener {
         @Override
         public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
             if (mPreviewBuilder == null || getView() == null) {
@@ -999,15 +1009,16 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
                     valueISO = iso;
                     mTextView.setText("灵敏度：" + iso);
                     break;
+                case R.id.sb_zoom:
+                    Rect rect = mCameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
+                    int radio = mCameraCharacteristics.get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM).intValue() / 2;
+                    int centerX = rect.centerX();
+                    int centerY = rect.centerY();
+                    Rect newRect = new Rect((i * centerX / radio) / 100 + 8, (i * centerY / radio) / 100 + 16, rect.right - ((i * centerX) / 100 / radio) - 1, rect.bottom - ((i * centerY) / 100 / radio) - 1);
+                    mPreviewBuilder.set(CaptureRequest.SCALER_CROP_REGION, newRect);
+                    mTextView.setText("放大：" + i + "%");
+                    break;
             }
-//            float f = mCameraCharacteristics.get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM);
-//            Log.i("onProgressChanged", "ffff->>>" + f);
-//            Rect rect = mCameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
-//            Log.i("111111", rect.left + "   " + rect.top + "   " + rect.right + "   " + rect.bottom);
-//            int centerX = rect.centerX();
-//            int centerY = rect.centerY();
-//            Rect newRect = new Rect(4, 4,  ((100 - i) * 1292 / 100),  ((100 - i) * 972 / 100));
-//            mPreviewBuilder.set(CaptureRequest.SCALER_CROP_REGION, newRect);
             updatePreview();
         }
 
@@ -1027,7 +1038,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
     /**
      * switch的监听器
      */
-    class MyOnCheckedChangeListener implements CompoundButton.OnCheckedChangeListener {
+    private class MyOnCheckedChangeListener implements CompoundButton.OnCheckedChangeListener {
 
         @Override
         public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -1115,6 +1126,5 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         window.setOutsideTouchable(true); //设置非PopupWindow区域可触摸
         return window;
     }
-
 
 }

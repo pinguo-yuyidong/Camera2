@@ -41,7 +41,6 @@ public class JpegSessionCallback extends CameraCaptureSession.CaptureCallback {
         Integer afState = result.get(CaptureResult.CONTROL_AF_STATE);
         Integer aeState = result.get(CaptureResult.CONTROL_AE_STATE);
         if (afState == null || aeState == null) {
-            Log.i("JpegSessionCallback", "afState == null || aeState == null");
             return;
         }
         Log.i("JpegSessionCallback", "要开始进入了,,afState.intValue()--->" + afState.intValue());
@@ -50,7 +49,8 @@ public class JpegSessionCallback extends CameraCaptureSession.CaptureCallback {
             Log.i("JpegSessionCallback", "进去了一层,,aeState.intValue()--->" + aeState.intValue());
             if (aeState.intValue() == CameraMetadata.CONTROL_AE_STATE_LOCKED || aeState == CameraMetadata.CONTROL_AE_STATE_PRECAPTURE) {
                 Log.i("JpegSessionCallback", "进去了两层");
-                mHandler.post(new JpegSaver());
+//                mHandler.post(new JpegSaver());
+                new Thread(new JpegSaver()).start();
                 mHandler.post(new Runnable() {
                     @Override
                     public void run() {
@@ -77,7 +77,6 @@ public class JpegSessionCallback extends CameraCaptureSession.CaptureCallback {
         ImageReader.OnImageAvailableListener ReaderListener = new ImageReader.OnImageAvailableListener() {
             @Override
             public void onImageAvailable(ImageReader imageReader) {
-                Log.i("JpegSaver", "onImageAvailable");
                 Image image = imageReader.acquireLatestImage();
                 checkParentDir();
                 File file;
@@ -105,7 +104,6 @@ public class JpegSessionCallback extends CameraCaptureSession.CaptureCallback {
          * 判断父文件是否存在
          */
         private void checkParentDir() {
-            Log.i("JpegSaver", "checkParentDir");
             File dir = new File(Environment.getExternalStorageDirectory() + "/Android_L_Test/");
             if (!dir.exists()) {
                 dir.mkdir();
@@ -116,7 +114,6 @@ public class JpegSessionCallback extends CameraCaptureSession.CaptureCallback {
          * 判断文件夹是否存在
          */
         private void checkJpegDir() {
-            Log.i("JpegSaver", "checkJpegDir");
             File dir = new File(Environment.getExternalStorageDirectory() + "/Android_L_Test/jpeg/");
             if (!dir.exists()) {
                 dir.mkdir();
@@ -133,6 +130,7 @@ public class JpegSessionCallback extends CameraCaptureSession.CaptureCallback {
             long time = System.currentTimeMillis();
             int random = new Random().nextInt(1000);
             File dir = new File(Environment.getExternalStorageDirectory() + "/Android_L_Test/jpeg/");
+            Log.i("JpegSaver", time + "_" + random + ".jpg");
             return new File(dir, time + "_" + random + ".jpg");
         }
 

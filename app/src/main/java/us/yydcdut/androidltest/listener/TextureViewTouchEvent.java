@@ -65,10 +65,8 @@ public class TextureViewTouchEvent implements MyTextureView.MyTextureViewTouchEv
                 updatePreview();
                 break;
             case MotionEvent.ACTION_UP:
-                int aeRegions = mCameraCharacteristics.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AE);
-                Log.i("ACTION_UP", "CONTROL_MAX_REGIONS_AE--->" + aeRegions);
-                int afRegions = mCameraCharacteristics.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AF);
-                Log.i("ACTION_UP", "CONTROL_MAX_REGIONS_AF--->" + afRegions);
+                int hardWare = mCameraCharacteristics.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL);
+                Log.i("ACTION_UP", "INFO_SUPPORTED_HARDWARE_LEVEL--->" + hardWare);
                 break;
         }
         return true;

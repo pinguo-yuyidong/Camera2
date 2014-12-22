@@ -44,7 +44,6 @@ public class DngSessionCallback extends CameraCaptureSession.CaptureCallback {
     @Override
     public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
         super.onCaptureCompleted(session, request, result);
-        Log.i("DngSessionCallback", "onCaptureCompleted");
         Integer afState = result.get(CaptureResult.CONTROL_AF_STATE);
         Integer aeState = result.get(CaptureResult.CONTROL_AE_STATE);
         if (afState == null || aeState == null) {
@@ -56,7 +55,8 @@ public class DngSessionCallback extends CameraCaptureSession.CaptureCallback {
             Log.i("DngSessionCallback", "进去了一层,,aeState.intValue()--->" + aeState.intValue());
             if (aeState.intValue() == CameraMetadata.CONTROL_AE_STATE_LOCKED || aeState == CameraMetadata.CONTROL_AE_STATE_PRECAPTURE || aeState == CameraMetadata.CONTROL_AE_STATE_FLASH_REQUIRED) {
                 Log.i("DngSessionCallback", "进去了两层");
-                mHandler.post(new DngRunnable(result));
+//                mHandler.post(new DngRunnable(result));
+                new Thread(new DngRunnable(result)).start();
                 mHandler.post(new Runnable() {
                     @Override
                     public void run() {
