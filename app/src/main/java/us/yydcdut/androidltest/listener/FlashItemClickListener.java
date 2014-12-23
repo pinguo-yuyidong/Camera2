@@ -13,6 +13,8 @@ import android.widget.PopupWindow;
 
 import us.yydcdut.androidltest.R;
 import us.yydcdut.androidltest.callback.PreviewSessionCallback;
+import us.yydcdut.androidltest.ui.AnimationTextView;
+import us.yydcdut.androidltest.ui.DisplayFragment;
 
 /**
  * Created by yuyidong on 14-12-18.
@@ -24,14 +26,16 @@ public class FlashItemClickListener implements AdapterView.OnItemClickListener {
     private PopupWindow mWindow;
     private ImageView mBtnFlash;
     private PreviewSessionCallback mPreviewSessionCallback;
+    private AnimationTextView mAnimationTextView;
 
-    public FlashItemClickListener(CaptureRequest.Builder mPreviewBuilder, CameraCaptureSession mCameraCaptureSession, Handler mHandler, PopupWindow mWindow, ImageView mBtnFlash, PreviewSessionCallback mPreviewSessionCallback) {
+    public FlashItemClickListener(CaptureRequest.Builder mPreviewBuilder, CameraCaptureSession mCameraCaptureSession, Handler mHandler, PopupWindow mWindow, ImageView mBtnFlash, PreviewSessionCallback mPreviewSessionCallback, AnimationTextView mAnimationTextView) {
         this.mPreviewBuilder = mPreviewBuilder;
         this.mCameraCaptureSession = mCameraCaptureSession;
         this.mHandler = mHandler;
         this.mWindow = mWindow;
         this.mBtnFlash = mBtnFlash;
         this.mPreviewSessionCallback = mPreviewSessionCallback;
+        this.mAnimationTextView = mAnimationTextView;
     }
 
     @Override
@@ -40,18 +44,22 @@ public class FlashItemClickListener implements AdapterView.OnItemClickListener {
             case 0:
                 mBtnFlash.setImageResource(R.drawable.btn_flash_off);
                 mPreviewBuilder.set(CaptureRequest.FLASH_MODE, CameraMetadata.FLASH_MODE_OFF);
+                mAnimationTextView.start("OFF", DisplayFragment.WINDOW_TEXT_DISAPPEAR);
                 break;
             case 1:
                 mBtnFlash.setImageResource(R.drawable.btn_flash_on);
                 mPreviewBuilder.set(CaptureRequest.FLASH_MODE, CameraMetadata.FLASH_MODE_SINGLE);
+                mAnimationTextView.start("SINGLE", DisplayFragment.WINDOW_TEXT_DISAPPEAR);
                 break;
             case 2:
                 mBtnFlash.setImageResource(R.drawable.btn_flash_all_on);
                 mPreviewBuilder.set(CaptureRequest.FLASH_MODE, CameraMetadata.FLASH_MODE_TORCH);
+                mAnimationTextView.start("TORCH", DisplayFragment.WINDOW_TEXT_DISAPPEAR);
                 break;
             case 3:
                 mBtnFlash.setImageResource(R.drawable.btn_flash_auto);
                 mPreviewBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_ON_AUTO_FLASH);
+                mAnimationTextView.start("AUTO_FLASH", DisplayFragment.WINDOW_TEXT_DISAPPEAR);
                 break;
         }
         updatePreview();

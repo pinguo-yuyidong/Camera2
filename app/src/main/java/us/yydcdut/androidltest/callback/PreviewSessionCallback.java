@@ -1,6 +1,5 @@
 package us.yydcdut.androidltest.callback;
 
-import android.content.Context;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
@@ -8,14 +7,10 @@ import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.TotalCaptureResult;
 import android.os.Handler;
 import android.view.MotionEvent;
-import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
 import android.widget.RelativeLayout;
 
-import us.yydcdut.androidltest.R;
-import us.yydcdut.androidltest.SleepThread;
-import us.yydcdut.androidltest.ui.DisplayFragment;
+import us.yydcdut.androidltest.ui.AnimationImageView;
 import us.yydcdut.androidltest.ui.MyTextureView;
 
 /**
@@ -23,17 +18,15 @@ import us.yydcdut.androidltest.ui.MyTextureView;
  */
 public class PreviewSessionCallback extends CameraCaptureSession.CaptureCallback implements MyTextureView.FocusPositionTouchEvent {
     private int mAfState = CameraMetadata.CONTROL_AF_STATE_INACTIVE;
-    private ImageView mFocusImage;
-    private Context mContext;
-    private Handler mHandler;
+    private AnimationImageView mFocusImage;
+    private Handler mMainHandler;
     private int mRawX;
     private int mRawY;
     private boolean mFlagShowFocusImage = false;
 
-    public PreviewSessionCallback(ImageView mFocusImage, Context mContext, Handler mHandler, MyTextureView mMyTextureView) {
+    public PreviewSessionCallback(AnimationImageView mFocusImage, Handler mMainHandler, MyTextureView mMyTextureView) {
         this.mFocusImage = mFocusImage;
-        this.mContext = mContext;
-        this.mHandler = mHandler;
+        this.mMainHandler = mMainHandler;
         mMyTextureView.setmFocusPositionTouchEvent(this);
     }
 
@@ -41,15 +34,6 @@ public class PreviewSessionCallback extends CameraCaptureSession.CaptureCallback
     public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, final TotalCaptureResult result) {
         super.onCaptureCompleted(session, request, result);
         //这样就可以操作focus的imageview了
-        mHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                judgeFocus(result);
-            }
-        });
-    }
-
-    private void judgeFocus(CaptureResult result) {
         Integer nowAfState = result.get(CaptureResult.CONTROL_AF_STATE);
         //获取失败
         if (nowAfState == null) {
@@ -60,6 +44,15 @@ public class PreviewSessionCallback extends CameraCaptureSession.CaptureCallback
             return;
         }
         mAfState = nowAfState.intValue();
+        mMainHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                judgeFocus();
+            }
+        });
+    }
+
+    private void judgeFocus() {
         switch (mAfState) {
             case CameraMetadata.CONTROL_AF_STATE_ACTIVE_SCAN:
                 //得到宽高
@@ -72,27 +65,23 @@ public class PreviewSessionCallback extends CameraCaptureSession.CaptureCallback
                 mFocusImage.setLayoutParams(layoutParams);
                 //显示
                 if (mFlagShowFocusImage == false) {
-                    mFocusImage.setVisibility(View.VISIBLE);
-                    mFocusImage.setBackground(mContext.getDrawable(R.drawable.focus));
+                    mFocusImage.startFocusing();
                     mFlagShowFocusImage = true;
                 }
                 break;
             case CameraMetadata.CONTROL_AF_STATE_FOCUSED_LOCKED:
                 if (mFlagShowFocusImage == true) {
-                    mFocusImage.setVisibility(View.VISIBLE);
-                    mFocusImage.setBackground(mContext.getDrawable(R.drawable.focus_succeed));
-                    new Thread(new SleepThread(mHandler, DisplayFragment.FOCUS_DISAPPEAR, 800)).start();
+                    mFocusImage.focusSuccess();
                     mFlagShowFocusImage = false;
                 }
                 break;
             case CameraMetadata.CONTROL_AF_STATE_INACTIVE:
-                mFocusImage.setVisibility(View.VISIBLE);
+                mFocusImage.stopFocus();
                 mFlagShowFocusImage = false;
                 break;
             case CameraMetadata.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED:
                 if (mFlagShowFocusImage == true) {
-                    mFocusImage.setBackground(mContext.getDrawable(R.drawable.focus_failed));
-                    new Thread(new SleepThread(mHandler, DisplayFragment.FOCUS_DISAPPEAR, 1200)).start();
+                    mFocusImage.focusFailed();
                     mFlagShowFocusImage = false;
                 }
                 break;

@@ -1,5 +1,6 @@
 package us.yydcdut.androidltest.listener;
 
+import android.content.Context;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraMetadata;
@@ -7,9 +8,12 @@ import android.hardware.camera2.CaptureRequest;
 import android.os.Handler;
 import android.util.Log;
 import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
+import us.yydcdut.androidltest.R;
 import us.yydcdut.androidltest.callback.PreviewSessionCallback;
 import us.yydcdut.androidltest.ui.AwbSeekBar;
 
@@ -23,12 +27,17 @@ public class AwbSeekBarChangeListener implements AwbSeekBar.OnAwbSeekBarChangeLi
     private Handler mHandler;
     private PreviewSessionCallback mPreviewSessionCallback;
 
-    public AwbSeekBarChangeListener(TextView mTextView, CaptureRequest.Builder mPreviewBuilder, CameraCaptureSession mCameraCaptureSession, Handler mHandler, PreviewSessionCallback mPreviewSessionCallback) {
+    private Animation mAlphaInAnimation;
+    private Animation mAlphaOutAnimation;
+
+    public AwbSeekBarChangeListener(Context mContext, TextView mTextView, CaptureRequest.Builder mPreviewBuilder, CameraCaptureSession mCameraCaptureSession, Handler mHandler, PreviewSessionCallback mPreviewSessionCallback) {
         this.mTextView = mTextView;
         this.mPreviewBuilder = mPreviewBuilder;
         this.mCameraCaptureSession = mCameraCaptureSession;
         this.mHandler = mHandler;
         this.mPreviewSessionCallback = mPreviewSessionCallback;
+        mAlphaInAnimation = AnimationUtils.loadAnimation(mContext, R.anim.alpha_in);
+        mAlphaOutAnimation = AnimationUtils.loadAnimation(mContext, R.anim.alpha_out);
     }
 
     @Override
@@ -89,7 +98,6 @@ public class AwbSeekBarChangeListener implements AwbSeekBar.OnAwbSeekBarChangeLi
 
     @Override
     public void onStopTrackingTouch(int num) {
-        mTextView.setVisibility(View.INVISIBLE);
         switch (num) {
             case 0:
                 mTextView.setText("自动");
@@ -125,11 +133,14 @@ public class AwbSeekBarChangeListener implements AwbSeekBar.OnAwbSeekBarChangeLi
                 break;
         }
         updatePreview();
+        mTextView.startAnimation(mAlphaOutAnimation);
+        mTextView.setVisibility(View.INVISIBLE);
     }
 
     @Override
     public void onStartTrackingTouch(SeekBar seekBar) {
         mTextView.setVisibility(View.VISIBLE);
+        mTextView.startAnimation(mAlphaInAnimation);
     }
 
     /**

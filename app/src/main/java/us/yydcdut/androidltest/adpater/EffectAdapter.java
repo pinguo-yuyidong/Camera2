@@ -31,7 +31,7 @@ public class EffectAdapter {
         map3.put("text", "monocolor");
         listItem.add(map3);
         HashMap<String, String> map4 = new HashMap<String, String>();
-        map4.put("text", "photo-negative");
+        map4.put("text", "negative");
         listItem.add(map4);
         HashMap<String, String> map5 = new HashMap<String, String>();
         map5.put("text", "posterization");
