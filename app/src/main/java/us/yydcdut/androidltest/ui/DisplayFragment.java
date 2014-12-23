@@ -338,6 +338,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         ImageView btnAwb = (ImageView) v.findViewById(R.id.btn_awb);
         ImageView btnIso = (ImageView) v.findViewById(R.id.btn_iso);
         ImageView btnzoom = (ImageView) v.findViewById(R.id.btn_zoom);
+        ImageView btnAlbum = (ImageView) v.findViewById(R.id.btn_album);
         mBtnEffect = (ImageView) v.findViewById(R.id.btn_effect);
         mBtnFlash = (ImageView) v.findViewById(R.id.btn_flash);
 
@@ -373,6 +374,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         btnzoom.setOnClickListener(this);
         mBtnEffect.setOnClickListener(this);
         mBtnFlash.setOnClickListener(this);
+        btnAlbum.setOnClickListener(this);
         //switch
         MyOnCheckedChangeListener myOnClickChangeListener = new MyOnCheckedChangeListener();
         switchAf.setOnCheckedChangeListener(myOnClickChangeListener);
@@ -957,6 +959,9 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
             case R.id.btn_zoom:
                 showZoomFlag = !showZoomFlag;
                 showLayout(SHOW_ZOOM, showZoomFlag);
+                break;
+            case R.id.btn_album:
+                getActivity().getFragmentManager().beginTransaction().replace(R.id.frame_main, AlbumFragment.newInstance()).addToBackStack(null).commit();
                 break;
         }
     }

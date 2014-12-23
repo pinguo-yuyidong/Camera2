@@ -36,9 +36,6 @@ public class SettingFragment extends Fragment implements View.OnClickListener {
     private SharedPreferences mSp;
     private SharedPreferences.Editor mEditor;
 
-    public SettingFragment() {
-    }
-
     public static SettingFragment newInstance() {
         SettingFragment instance = new SettingFragment();
 

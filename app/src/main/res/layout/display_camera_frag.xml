@@ -114,6 +114,15 @@
             android:layout_height="wrap_content">
 
             <ImageView
+                android:id="@+id/btn_album"
+                android:layout_alignParentLeft="true"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true"
+                android:layout_marginLeft="20dip"
+                android:src="@drawable/btn_album"/>
+
+            <ImageView
                 android:id="@+id/btn_capture"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
