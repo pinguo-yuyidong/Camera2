@@ -28,14 +28,12 @@ import java.util.Random;
 public class DngSessionCallback extends CameraCaptureSession.CaptureCallback {
 
     private Context mContext;
-    private String mCameraId;
     private ImageReader mImageReader;
     private Handler mHandler;
     private MediaActionSound mMediaActionSound;
 
-    public DngSessionCallback(Context mContext, String mCameraId, ImageReader mImageReader, Handler mHandler, MediaActionSound mMediaActionSound) {
+    public DngSessionCallback(Context mContext, ImageReader mImageReader, Handler mHandler, MediaActionSound mMediaActionSound) {
         this.mContext = mContext;
-        this.mCameraId = mCameraId;
         this.mImageReader = mImageReader;
         this.mHandler = mHandler;
         this.mMediaActionSound = mMediaActionSound;
@@ -80,7 +78,8 @@ public class DngSessionCallback extends CameraCaptureSession.CaptureCallback {
             DngCreator dngCreator = null;
             CameraManager manager = (CameraManager) mContext.getSystemService(Context.CAMERA_SERVICE);
             try {
-                CameraCharacteristics cameraCharacteristics = manager.getCameraCharacteristics(mCameraId);
+                //前置摄像头没有dng
+                CameraCharacteristics cameraCharacteristics = manager.getCameraCharacteristics("0");
                 dngCreator = new DngCreator(cameraCharacteristics, mResult);
                 dngCreator.writeImage(new FileOutputStream(createFile()), mImageReader.acquireNextImage());
             } catch (CameraAccessException e) {

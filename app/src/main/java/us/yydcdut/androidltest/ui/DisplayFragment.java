@@ -3,6 +3,7 @@ package us.yydcdut.androidltest.ui;
 import android.app.Activity;
 import android.app.Fragment;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.graphics.ImageFormat;
@@ -71,6 +72,7 @@ import us.yydcdut.androidltest.listener.EffectItemClickListener;
 import us.yydcdut.androidltest.listener.FlashItemClickListener;
 import us.yydcdut.androidltest.listener.SenseItemClickListener;
 import us.yydcdut.androidltest.listener.TextureViewTouchEvent;
+import us.yydcdut.androidltest.otheractivity.FlashActivity;
 
 /**
  * Created by yuyidong on 14-12-4.
@@ -397,6 +399,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         ImageView btnIso = (ImageView) v.findViewById(R.id.btn_iso);
         ImageView btnZoom = (ImageView) v.findViewById(R.id.btn_zoom);
         ImageView btnAlbum = (ImageView) v.findViewById(R.id.btn_album);
+        ImageView btnFlashLight = (ImageView) v.findViewById(R.id.btn_flashlight);
         mBtnEffect = (ImageView) v.findViewById(R.id.btn_effect);
         mBtnFlash = (ImageView) v.findViewById(R.id.btn_flash);
         mBtnSense = (ImageView) v.findViewById(R.id.btn_sense);
@@ -435,6 +438,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         mBtnFlash.setOnClickListener(this);
         btnAlbum.setOnClickListener(this);
         mBtnSense.setOnClickListener(this);
+        btnFlashLight.setOnClickListener(this);
         //switch
         MyOnCheckedChangeListener myOnClickChangeListener = new MyOnCheckedChangeListener();
         switchAf.setOnCheckedChangeListener(myOnClickChangeListener);
@@ -933,7 +937,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
             } else if (mState == STATE_CAPTURE) {
                 if (mFormat == ImageFormat.RAW_SENSOR) {
                     try {
-                        cameraCaptureSession.setRepeatingRequest(mCaptureBuilder.build(), new DngSessionCallback(getActivity(), mCameraId, mImageReader, mHandler, mMediaActionSound), mHandler);
+                        cameraCaptureSession.setRepeatingRequest(mCaptureBuilder.build(), new DngSessionCallback(getActivity(), mImageReader, mHandler, mMediaActionSound), mHandler);
                     } catch (CameraAccessException e) {
                         e.printStackTrace();
                     }
@@ -1039,6 +1043,10 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
                 int xoff3 = window3.getWidth() / 2 - mBtnSense.getWidth() / 2;
                 window3.update();
                 window3.showAsDropDown(mBtnSense, -xoff3, 0);
+                break;
+            case R.id.btn_flashlight:
+                Intent intent = new Intent(getActivity(), FlashActivity.class);
+                getActivity().startActivity(intent);
                 break;
         }
     }
@@ -1179,14 +1187,18 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         if (showOrNot) {
             //全部隐藏但是AF/AE的显示出来
             for (int i = 0; i < mLayoutBottom.getChildCount(); i++) {
-                mLayoutBottom.getChildAt(i).setVisibility(View.INVISIBLE);
+                if (mLayoutBottom.getChildAt(i).getVisibility() == View.VISIBLE) {
+                    mLayoutBottom.getChildAt(i).setVisibility(View.INVISIBLE);
+                }
             }
             v.startAnimation(mShowAction);
             v.setVisibility(View.VISIBLE);
         } else {
             //全部隐藏但是capture的显示出来
             for (int i = 0; i < mLayoutBottom.getChildCount(); i++) {
-                mLayoutBottom.getChildAt(i).setVisibility(View.INVISIBLE);
+                if (mLayoutBottom.getChildAt(i).getVisibility() == View.VISIBLE) {
+                    mLayoutBottom.getChildAt(i).setVisibility(View.INVISIBLE);
+                }
             }
             mLayoutCapture.startAnimation(mShowAction);
             mLayoutCapture.setVisibility(View.VISIBLE);

@@ -145,6 +145,15 @@
                 android:src="@drawable/btn_capture"/>
 
             <ImageView
+                android:id="@+id/btn_flashlight"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerVertical="true"
+                android:layout_marginRight="15dip"
+                android:layout_toLeftOf="@+id/btn_setting"
+                android:background="@drawable/btn_flashlight"/>
+
+            <ImageView
                 android:id="@+id/btn_setting"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

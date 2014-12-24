@@ -139,6 +139,24 @@ public class FlashActivity extends Activity {
     }
 
     private void close() {
-        mCameraDevice.close();
+        if (mCameraDevice == null || mSession == null) {
+            return;
+        }
+        new Thread() {
+            @Override
+            public void run() {
+                super.run();
+                mSession.close();
+                mCameraDevice.close();
+                mCameraDevice = null;
+                mSession = null;
+            }
+        }.start();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        close();
     }
 }
