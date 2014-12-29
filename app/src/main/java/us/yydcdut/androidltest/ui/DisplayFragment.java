@@ -316,8 +316,8 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         //初始化sharedPreference
         mSp = getActivity().getSharedPreferences("currentcamera" + mCameraId, Context.MODE_PRIVATE);
         mEditor = mSp.edit();
-    }
 
+    }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -353,7 +353,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
      */
     private void initUIAndListener(View v) {
         mTextureView = (MyTextureView) v.findViewById(R.id.textureview);
-        mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
+        mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);//设置监听器
 
         mSeekBarTextView = (TextView) v.findViewById(R.id.txt_sb_txt);
         mSeekBarTextView.setVisibility(View.INVISIBLE);
@@ -516,6 +516,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         //得到surface
         List<Surface> outputFurfaces = new ArrayList<Surface>(2);
         outputFurfaces.add(mImageReader.getSurface());
+        outputFurfaces.add(surface);
         //创建构建者，配置参数
         mCaptureBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
         if (mFormat == ImageFormat.RAW_SENSOR) {
@@ -531,9 +532,9 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         mCaptureBuilder.set(CaptureRequest.JPEG_ORIENTATION, ORIENTATIONS.get(rotation));
         previewBuilder2CaptureBuilder();
         //开启保存JPEG图片的线程
-//        if (mFormat == ImageFormat.JPEG) {
+        if (mFormat == ImageFormat.JPEG) {
 //            mHandler.post(new JpegSaver(mImageReader, mHandler, mFormat));
-//        }
+        }
         mState = STATE_CAPTURE;
         mCameraDevice.createCaptureSession(outputFurfaces, mSessionStateCallback, mHandler);
     }
@@ -574,7 +575,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
     }
 
     /**
-     * 初始化handler
+     * 初始化子线程和handler
      */
     private void initHandler() {
         mHandlerThread = new HandlerThread("Android_L_Camera");
@@ -587,6 +588,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
      */
     @SuppressWarnings("ResourceType")
     private void openCamera(int viewWidth, int viewHeight) throws CameraAccessException {
+        initHandler();//初始化子线程和handler
         //获得camera服务
         mCameraManager = (CameraManager) getActivity().getSystemService(Context.CAMERA_SERVICE);
         setUpCameraOutputs();
@@ -851,8 +853,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         public void onSurfaceTextureAvailable(SurfaceTexture surfaceTexture, int i, int i2) {
             Log.i("SurfaceTextureListener", "onSurfaceTextureAvailable");
             try {
-                initHandler();
-                openCamera(i, i2);
+                openCamera(i, i2);//打开相机
             } catch (CameraAccessException e) {
                 e.printStackTrace();
             }
