@@ -70,6 +70,7 @@ import us.yydcdut.androidltest.callback.PreviewSessionCallback;
 import us.yydcdut.androidltest.listener.AwbSeekBarChangeListener;
 import us.yydcdut.androidltest.listener.EffectItemClickListener;
 import us.yydcdut.androidltest.listener.FlashItemClickListener;
+import us.yydcdut.androidltest.listener.JpegReaderListener;
 import us.yydcdut.androidltest.listener.SenseItemClickListener;
 import us.yydcdut.androidltest.listener.TextureViewTouchEvent;
 import us.yydcdut.androidltest.otheractivity.FlashActivity;
@@ -224,7 +225,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
     /**
      * 显示的surface
      */
-    private Surface surface;
+    private Surface mSurface;
     /**
      * seekbar中的数字那些的显示
      */
@@ -259,6 +260,8 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
     private AnimationImageView mFocusImage;
     private int mToPreviewWidth;
     private int mToPreviewHeight;
+    private List<Surface> mOutputSurfaces;
+    private Size mlargest;
     //----------------------------seekbar的值-------------------------
     //初始化的话是实用中间值
     private float valueAF;
@@ -503,22 +506,35 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         mFocusImage.initFocus();
     }
 
-    /**
-     * 拍照
-     */
-    private void takePicture() throws CameraAccessException {
+    private void initOutputSurface() {
         //图片格式
         mFormat = mSp.getInt("format", 256);
-        Log.i("takePicture", "format--->" + mFormat);
         //图片尺寸
         int sizeWidth = mSp.getInt("format_" + mFormat + "_pictureSize_width", 1280);
         int sizeHeight = mSp.getInt("format_" + mFormat + "_pictureSize_height", 960);
         //得到ImageReader对象,5为maxImage，放入队列里面的最大连拍张数(应该是这个意思)
-        mImageReader = ImageReader.newInstance(sizeWidth, sizeHeight, mFormat, 2);
+        mImageReader = ImageReader.newInstance(mlargest.getWidth(), mlargest.getHeight(), mFormat, 2);
+        if (mFormat == ImageFormat.JPEG) {
+            mImageReader.setOnImageAvailableListener(new JpegReaderListener(), mHandler);
+        } else if (mFormat == ImageFormat.RAW_SENSOR) {
+
+        }
+        //得到SurfaceTexture
+        SurfaceTexture texture = mTextureView.getSurfaceTexture();
+        //设置默认的图像缓冲区的大小
+        texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
+        //显示的Surface
+        mSurface = new Surface(texture);
         //得到surface
-        List<Surface> outputFurfaces = new ArrayList<Surface>(2);
-        outputFurfaces.add(mImageReader.getSurface());
-        outputFurfaces.add(surface);
+        mOutputSurfaces = new ArrayList<Surface>(2);
+        mOutputSurfaces.add(mImageReader.getSurface());
+        mOutputSurfaces.add(mSurface);
+    }
+
+    /**
+     * 拍照
+     */
+    private void takePicture() throws CameraAccessException {
         //创建构建者，配置参数
         mCaptureBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_ZERO_SHUTTER_LAG);
         if (mFormat == ImageFormat.RAW_SENSOR) {
@@ -538,7 +554,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
 //            mHandler.post(new JpegSaver(mImageReader, mHandler, mFormat));
         }
         mState = STATE_CAPTURE;
-        mCameraDevice.createCaptureSession(outputFurfaces, mSessionStateCallback, mHandler);
+        mCameraDevice.createCaptureSession(mOutputSurfaces, mSessionCaptureStateCallback, mHandler);
     }
 
     /**
@@ -595,6 +611,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         mCameraManager = (CameraManager) getActivity().getSystemService(Context.CAMERA_SERVICE);
         setUpCameraOutputs(viewWidth, viewHeight);
         configureTransform(viewWidth, viewHeight);
+        initOutputSurface();
         //打开相机
         mCameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, mHandler);
         newPreviewSession();
@@ -606,6 +623,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
     private void newPreviewSession() {
         mPreviewSessionCallback = new PreviewSessionCallback(mFocusImage, mMainHandler, mTextureView);
     }
+
 
     /**
      * 得到CameraCharacteristics等信息，设置显示大小
@@ -619,8 +637,8 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
             mCameraCharacteristics = mCameraManager.getCameraCharacteristics(mCameraId);
             //流配置
             StreamConfigurationMap map = mCameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-            Size largest = Collections.max(Arrays.asList(map.getOutputSizes(ImageFormat.JPEG)), new CompareSizesByArea());
-            mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height, largest);
+            mlargest = Collections.max(Arrays.asList(map.getOutputSizes(ImageFormat.JPEG)), new CompareSizesByArea());
+            mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height, mlargest);
         } else {
             mPreviewSize = new Size(1280, 720);
         }
@@ -697,26 +715,20 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
      */
     private void startPreview() {
         try {
-            //得到SurfaceTexture
-            SurfaceTexture texture = mTextureView.getSurfaceTexture();
             mPreviewBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-            //设置默认的图像缓冲区的大小
-            texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
-            //显示的Surface
-            surface = new Surface(texture);
             //TEMPLATE_PREVIEW--->创建一个请求适合相机预览窗口。
-            mPreviewBuilder.addTarget(surface);
+            mPreviewBuilder.addTarget(mSurface);
             //初始化参数
             initPreviewBuilder();
             //3A--->auto
             mPreviewBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
             //3A
             mPreviewBuilder.set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_AUTO);
-            mPreviewBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AF_MODE_AUTO);
+            mPreviewBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_ON);
             mPreviewBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CameraMetadata.CONTROL_AWB_MODE_AUTO);
             //创建拍照会话，一旦CameraCaptureSession创建,可以提交请求（capture、captureBurst,或setRepeatingBurst）。
             mState = STATE_PREVIEW;
-            mCameraDevice.createCaptureSession(Arrays.asList(surface), mSessionStateCallback, mHandler);
+            mCameraDevice.createCaptureSession(Arrays.asList(mSurface), mSessionPreviewStateCallback, mHandler);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
@@ -779,7 +791,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
     private void continuePreview() {
         mState = STATE_PREVIEW;
         try {
-            mCameraDevice.createCaptureSession(Arrays.asList(surface), mSessionStateCallback, mHandler);
+            mCameraDevice.createCaptureSession(Arrays.asList(mSurface), mSessionPreviewStateCallback, mHandler);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
@@ -904,35 +916,16 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
      * 会话状态的回调
      * 继续preview
      */
-    private CameraCaptureSession.StateCallback mSessionStateCallback = new CameraCaptureSession.StateCallback() {
+    private CameraCaptureSession.StateCallback mSessionPreviewStateCallback = new CameraCaptureSession.StateCallback() {
         @Override
         public void onConfigured(CameraCaptureSession cameraCaptureSession) {
             Log.i("CameraCaptureSession.StateCallback", "mSessionStateCallback--->onConfigured");
-            if (mState == STATE_PREVIEW) {
-                try {
-                    mCameraCaptureSession = cameraCaptureSession;
-                    setListener();
-                    cameraCaptureSession.setRepeatingRequest(mPreviewBuilder.build(), mPreviewSessionCallback, mHandler);
-                } catch (CameraAccessException e) {
-                    e.printStackTrace();
-                }
-            } else if (mState == STATE_CAPTURE) {
-                if (mFormat == ImageFormat.RAW_SENSOR) {
-                    try {
-                        //连拍不稳定
-                        cameraCaptureSession.capture(mCaptureBuilder.build(), new DngSessionCallback(getActivity(), mImageReader, mHandler, mMediaActionSound), mHandler);
-//                        cameraCaptureSession.setRepeatingRequest(mCaptureBuilder.build(), new DngSessionCallback(getActivity(), mImageReader, mHandler, mMediaActionSound), mHandler);
-                    } catch (CameraAccessException e) {
-                        e.printStackTrace();
-                    }
-                } else {
-                    try {
-//                        cameraCaptureSession.setRepeatingRequest(mCaptureBuilder.build(), new JpegSessionCallback(mHandler, mMediaActionSound, mImageReader), mHandler);
-                        cameraCaptureSession.setRepeatingBurst(Arrays.asList(mCaptureBuilder.build()), new JpegSessionCallback(mHandler, mMediaActionSound, mImageReader), mHandler);
-                    } catch (CameraAccessException e) {
-                        e.printStackTrace();
-                    }
-                }
+            try {
+                mCameraCaptureSession = cameraCaptureSession;
+                setListener();
+                cameraCaptureSession.setRepeatingRequest(mPreviewBuilder.build(), mPreviewSessionCallback, mHandler);
+            } catch (CameraAccessException e) {
+                e.printStackTrace();
             }
         }
 
@@ -940,7 +933,8 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         public void onConfigureFailed(CameraCaptureSession cameraCaptureSession) {
             Log.i("CameraCaptureSession.StateCallback", "mSessionStateCallback--->onConfigureFailed");
             //丢弃掉所有在队列中的拍照的数据
-            Toast.makeText(getActivity(), "onConfigureFailed", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getActivity(), "onConfigureFailed---Preview", Toast.LENGTH_SHORT).show();
+
         }
 
         @Override
@@ -959,6 +953,35 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         public void onClosed(CameraCaptureSession session) {
             super.onClosed(session);
             Log.i("CameraCaptureSession.StateCallback", "mSessionStateCallback--->onClosed");
+        }
+    };
+
+    private CameraCaptureSession.StateCallback mSessionCaptureStateCallback = new CameraCaptureSession.StateCallback() {
+        @Override
+        public void onConfigured(CameraCaptureSession session) {
+            if (mFormat == ImageFormat.RAW_SENSOR) {
+                try {
+                    //连拍不稳定,capture也不太稳定
+                    session.capture(mCaptureBuilder.build(),
+                            new DngSessionCallback(getActivity(), mImageReader, mHandler, mMediaActionSound), mHandler);
+//                        cameraCaptureSession.setRepeatingRequest(mCaptureBuilder.build(), new DngSessionCallback(getActivity(), mImageReader, mHandler, mMediaActionSound), mHandler);
+                } catch (CameraAccessException e) {
+                    e.printStackTrace();
+                }
+            } else {
+                try {
+//                        cameraCaptureSession.setRepeatingRequest(mCaptureBuilder.build(), new JpegSessionCallback(mHandler, mMediaActionSound, mImageReader), mHandler);
+                    session.setRepeatingBurst(Arrays.asList(mCaptureBuilder.build()),
+                            new JpegSessionCallback(mHandler, mMediaActionSound, mImageReader), mHandler);
+                } catch (CameraAccessException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        @Override
+        public void onConfigureFailed(CameraCaptureSession session) {
+            Toast.makeText(getActivity(), "onConfigureFailed---Capture", Toast.LENGTH_SHORT).show();
         }
     };
 
