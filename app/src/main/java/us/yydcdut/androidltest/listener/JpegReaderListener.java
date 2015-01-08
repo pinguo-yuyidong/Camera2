@@ -36,7 +36,6 @@ public class JpegReaderListener implements ImageReader.OnImageAvailableListener 
             File file;
             checkJpegDir();
             file = createJpeg();
-            //这里到最后会出现null,所有trycatch一下
             try {
                 ByteBuffer buffer = image.getPlanes()[0].getBuffer();
                 byte[] bytes = new byte[buffer.remaining()];
@@ -48,7 +47,6 @@ public class JpegReaderListener implements ImageReader.OnImageAvailableListener 
                 }
                 image.close();
             } catch (Exception e) {
-                Log.i("Exception e", "ImageFormat.JPEG,,,,,,,,Exception eException e");
                 e.getStackTrace();
             }
         }
