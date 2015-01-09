@@ -74,6 +74,10 @@ import us.yydcdut.androidltest.listener.JpegReaderListener;
 import us.yydcdut.androidltest.listener.SenseItemClickListener;
 import us.yydcdut.androidltest.listener.TextureViewTouchEvent;
 import us.yydcdut.androidltest.otheractivity.FlashActivity;
+import us.yydcdut.androidltest.view.AnimationImageView;
+import us.yydcdut.androidltest.view.AnimationTextView;
+import us.yydcdut.androidltest.view.AwbSeekBar;
+import us.yydcdut.androidltest.view.MyTextureView;
 
 /**
  * Created by yuyidong on 14-12-4.
@@ -84,6 +88,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
     private int mState = 0;
     public static final int FOCUS_DISAPPEAR = 100;
     public static final int WINDOW_TEXT_DISAPPEAR = 101;
+    public static final int FOCUS_AGAIN = 102;
 
     private static final int SHOW_AF = 1;
     private static final int SHOW_AE = 2;
@@ -296,6 +301,11 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
                     if (mWindowTextView.mTimes == valueTimes2.intValue()) {
                         mWindowTextView.stop();
                     }
+                    break;
+                case FOCUS_AGAIN:
+                    Log.i("FOCUS_AGAIN", "FOCUS_AGAINFOCUS_AGAINFOCUS_AGAIN");
+                    mPreviewBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_PRECAPTURE_TRIGGER_START);
+                    updatePreview();
                     break;
             }
         }
@@ -549,10 +559,6 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         int rotation = getActivity().getWindowManager().getDefaultDisplay().getRotation();
         mCaptureBuilder.set(CaptureRequest.JPEG_ORIENTATION, ORIENTATIONS.get(rotation));
         previewBuilder2CaptureBuilder();
-        //开启保存JPEG图片的线程
-        if (mFormat == ImageFormat.JPEG) {
-//            mHandler.post(new JpegSaver(mImageReader, mHandler, mFormat));
-        }
         mState = STATE_CAPTURE;
         mCameraDevice.createCaptureSession(mOutputSurfaces, mSessionCaptureStateCallback, mHandler);
     }
@@ -631,13 +637,16 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
      * @throws CameraAccessException
      */
     private void setUpCameraOutputs(int width, int height) throws CameraAccessException {
-
-        if (mCameraId.equals("0")) {
-            //描述CameraDevice属性
-            mCameraCharacteristics = mCameraManager.getCameraCharacteristics(mCameraId);
-            //流配置
-            StreamConfigurationMap map = mCameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+        mFormat = mSp.getInt("format", 256);
+        //描述CameraDevice属性
+        mCameraCharacteristics = mCameraManager.getCameraCharacteristics(mCameraId);
+        //流配置
+        StreamConfigurationMap map = mCameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+        if (mCameraId.equals("0") && mFormat == ImageFormat.JPEG) {
             mlargest = Collections.max(Arrays.asList(map.getOutputSizes(ImageFormat.JPEG)), new CompareSizesByArea());
+            mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height, mlargest);
+        } else if (mCameraId.equals("0") && mFormat == ImageFormat.RAW_SENSOR) {
+            mlargest = Collections.max(Arrays.asList(map.getOutputSizes(ImageFormat.RAW_SENSOR)), new CompareSizesByArea());
             mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height, mlargest);
         } else {
             mPreviewSize = new Size(1280, 720);
@@ -967,14 +976,18 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
 //                        cameraCaptureSession.setRepeatingRequest(mCaptureBuilder.build(), new DngSessionCallback(getActivity(), mImageReader, mHandler, mMediaActionSound), mHandler);
                 } catch (CameraAccessException e) {
                     e.printStackTrace();
+                } catch (Exception e) {
+                    Toast.makeText(getActivity(), "onConfigured,Session closed", Toast.LENGTH_SHORT).show();
                 }
             } else {
                 try {
 //                        cameraCaptureSession.setRepeatingRequest(mCaptureBuilder.build(), new JpegSessionCallback(mHandler, mMediaActionSound, mImageReader), mHandler);
                     session.setRepeatingBurst(Arrays.asList(mCaptureBuilder.build()),
-                            new JpegSessionCallback(mHandler, mMediaActionSound, mImageReader), mHandler);
+                            new JpegSessionCallback(mHandler, mMediaActionSound, mMainHandler), mHandler);
                 } catch (CameraAccessException e) {
                     e.printStackTrace();
+                } catch (Exception e) {
+                    Toast.makeText(getActivity(), "onConfigured,Session closed", Toast.LENGTH_SHORT).show();
                 }
             }
         }

@@ -1,4 +1,4 @@
-package us.yydcdut.androidltest.ui;
+package us.yydcdut.androidltest.view;
 
 import android.content.Context;
 import android.util.AttributeSet;
@@ -79,8 +79,8 @@ public class TitleView extends RelativeLayout {
 //        }
 //    }
 
-    public void hideBackBtn(){
-        if(mTitleBackBtn!=null){
+    public void hideBackBtn() {
+        if (mTitleBackBtn != null) {
             mTitleBackBtn.setVisibility(View.GONE);
         }
     }

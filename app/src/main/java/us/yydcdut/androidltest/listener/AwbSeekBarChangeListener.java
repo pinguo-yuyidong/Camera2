@@ -15,7 +15,7 @@ import android.widget.TextView;
 
 import us.yydcdut.androidltest.R;
 import us.yydcdut.androidltest.callback.PreviewSessionCallback;
-import us.yydcdut.androidltest.ui.AwbSeekBar;
+import us.yydcdut.androidltest.view.AwbSeekBar;
 
 /**
  * Created by yuyidong on 14-12-18.

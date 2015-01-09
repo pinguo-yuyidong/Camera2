@@ -1,4 +1,4 @@
-package us.yydcdut.androidltest.ui;
+package us.yydcdut.androidltest.view;
 
 import android.content.Context;
 import android.os.Handler;
@@ -9,6 +9,7 @@ import android.widget.ImageView;
 
 import us.yydcdut.androidltest.R;
 import us.yydcdut.androidltest.SleepThread;
+import us.yydcdut.androidltest.ui.DisplayFragment;
 
 /**
  * Created by yuyidong on 14-12-23.

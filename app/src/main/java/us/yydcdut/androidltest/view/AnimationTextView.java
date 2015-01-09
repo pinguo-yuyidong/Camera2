@@ -1,4 +1,4 @@
-package us.yydcdut.androidltest.ui;
+package us.yydcdut.androidltest.view;
 
 import android.content.Context;
 import android.os.Handler;

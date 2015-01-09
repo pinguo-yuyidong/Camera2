@@ -4,7 +4,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent">
 
-    <us.yydcdut.androidltest.ui.MyTextureView
+    <us.yydcdut.androidltest.view.MyTextureView
         android:id="@+id/textureview"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -95,7 +95,7 @@
 
     </LinearLayout>
 
-    <us.yydcdut.androidltest.ui.AnimationTextView
+    <us.yydcdut.androidltest.view.AnimationTextView
         android:id="@+id/txt_window_txt"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -300,7 +300,7 @@
                     android:src="@drawable/ic_camera_wb_warm_fluorescent"/>
             </LinearLayout>
 
-            <us.yydcdut.androidltest.ui.AwbSeekBar
+            <us.yydcdut.androidltest.view.AwbSeekBar
                 android:id="@+id/sb_awb"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
@@ -339,7 +339,7 @@
 
     </RelativeLayout>
 
-    <us.yydcdut.androidltest.ui.AnimationImageView
+    <us.yydcdut.androidltest.view.AnimationImageView
         android:id="@+id/img_focus"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

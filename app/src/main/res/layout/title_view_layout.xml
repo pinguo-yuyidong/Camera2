@@ -7,40 +7,40 @@
       android:layout_width="match_parent"
       android:layout_alignParentTop="true"
       android:background="#92DAFA"
-      class="us.yydcdut.androidltest.ui.TitleView">
+      class="us.yydcdut.androidltest.view.TitleView">
 
     <ImageView
-            android:id="@+id/title_back_btn"
-            android:src="@drawable/btn_nav_bac"
-            android:scaleType="center"
-            android:layout_marginLeft="15dp"
-            android:layout_centerVertical="true"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"/>
+        android:id="@+id/title_back_btn"
+        android:src="@drawable/btn_nav_bac"
+        android:scaleType="center"
+        android:layout_marginLeft="15dp"
+        android:layout_centerVertical="true"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"/>
 
     <TextView
-            android:id="@+id/title_text_title"
-            android:textSize="19sp"
-            android:textColor="#e8e8e8"
-            android:layout_height="wrap_content"
-            android:layout_width="wrap_content"
-            android:paddingLeft="40dp"
-            android:paddingRight="40dp"
-            android:singleLine="true"
-            android:ellipsize="end"
-            android:layout_centerInParent="true"/>
+        android:id="@+id/title_text_title"
+        android:textSize="19sp"
+        android:textColor="#e8e8e8"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        android:paddingLeft="40dp"
+        android:paddingRight="40dp"
+        android:singleLine="true"
+        android:ellipsize="end"
+        android:layout_centerInParent="true"/>
 
     <TextView
-            android:id="@+id/title_right_btn"
-            android:layout_marginRight="15dp"
-            android:textColor="@drawable/title_text_selector"
-            android:layout_centerVertical="true"
-            android:layout_alignParentRight="true"
-            android:gravity="center"
-            android:textSize="17sp"
-            android:visibility="gone"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"/>
+        android:id="@+id/title_right_btn"
+        android:layout_marginRight="15dp"
+        android:textColor="@drawable/title_text_selector"
+        android:layout_centerVertical="true"
+        android:layout_alignParentRight="true"
+        android:gravity="center"
+        android:textSize="17sp"
+        android:visibility="gone"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"/>
 
 </view>
 

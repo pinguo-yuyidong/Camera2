@@ -13,8 +13,8 @@ import android.widget.PopupWindow;
 
 import us.yydcdut.androidltest.R;
 import us.yydcdut.androidltest.callback.PreviewSessionCallback;
-import us.yydcdut.androidltest.ui.AnimationTextView;
 import us.yydcdut.androidltest.ui.DisplayFragment;
+import us.yydcdut.androidltest.view.AnimationTextView;
 
 /**
  * Created by yuyidong on 14-12-18.

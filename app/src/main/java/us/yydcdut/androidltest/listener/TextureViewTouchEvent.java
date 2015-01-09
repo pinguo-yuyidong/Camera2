@@ -13,7 +13,7 @@ import android.view.MotionEvent;
 import android.view.TextureView;
 
 import us.yydcdut.androidltest.callback.PreviewSessionCallback;
-import us.yydcdut.androidltest.ui.MyTextureView;
+import us.yydcdut.androidltest.view.MyTextureView;
 
 /**
  * Created by yuyidong on 14-12-18.

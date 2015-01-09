@@ -17,6 +17,7 @@ import java.util.Map;
 
 import us.yydcdut.androidltest.PreferenceHelper;
 import us.yydcdut.androidltest.R;
+import us.yydcdut.androidltest.view.SettingItem;
 
 /**
  * Created by yuyidong on 14-12-5.

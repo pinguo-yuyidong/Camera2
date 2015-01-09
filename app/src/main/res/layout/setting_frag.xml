@@ -8,18 +8,18 @@
 
     <include layout="@layout/title_view_layout"/>
 
-    <us.yydcdut.androidltest.ui.SettingItem
+    <us.yydcdut.androidltest.view.SettingItem
         android:id="@+id/setting_item_format"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="10dip">
-    </us.yydcdut.androidltest.ui.SettingItem>
+    </us.yydcdut.androidltest.view.SettingItem>
 
-    <us.yydcdut.androidltest.ui.SettingItem
+    <us.yydcdut.androidltest.view.SettingItem
         android:id="@+id/setting_item_size"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         >
-    </us.yydcdut.androidltest.ui.SettingItem>
+    </us.yydcdut.androidltest.view.SettingItem>
 
 </LinearLayout>

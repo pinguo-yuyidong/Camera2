@@ -5,10 +5,11 @@ import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.TotalCaptureResult;
-import android.media.ImageReader;
 import android.media.MediaActionSound;
 import android.os.Handler;
 import android.util.Log;
+
+import us.yydcdut.androidltest.ui.DisplayFragment;
 
 /**
  * Created by yuyidong on 14-12-17.
@@ -16,12 +17,12 @@ import android.util.Log;
 public class JpegSessionCallback extends CameraCaptureSession.CaptureCallback {
     private Handler mHandler;
     private MediaActionSound mMediaActionSound;
-    private ImageReader mImageReader;
+    private Handler mMainHanler;
 
-    public JpegSessionCallback(Handler mHandler, MediaActionSound mMediaActionSound, ImageReader mImageReader) {
+    public JpegSessionCallback(Handler mHandler, MediaActionSound mMediaActionSound, Handler mMainHanler) {
         this.mHandler = mHandler;
         this.mMediaActionSound = mMediaActionSound;
-        this.mImageReader = mImageReader;
+        this.mMainHanler = mMainHanler;
     }
 
     @Override
@@ -45,8 +46,11 @@ public class JpegSessionCallback extends CameraCaptureSession.CaptureCallback {
                         mMediaActionSound.play(MediaActionSound.SHUTTER_CLICK);
                     }
                 });
-
+            } else {
+                mMainHanler.sendEmptyMessage(DisplayFragment.FOCUS_AGAIN);
             }
+        } else {
+            mMainHanler.sendEmptyMessage(DisplayFragment.FOCUS_AGAIN);
         }
     }
 }
