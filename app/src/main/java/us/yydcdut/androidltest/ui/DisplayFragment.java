@@ -725,8 +725,6 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
     private void startPreview() {
         try {
             mPreviewBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-            mPreviewBuilder.set(CaptureRequest.CONTROL_EFFECT_MODE, CameraMetadata.CONTROL_EFFECT_MODE_NEGATIVE);
-            mCameraCaptureSession.setRepeatingRequest(mPreviewBuilder.build(), mPreviewSessionCallback, mHandler);
             //TEMPLATE_PREVIEW--->创建一个请求适合相机预览窗口。
             mPreviewBuilder.addTarget(mSurface);
             //初始化参数
