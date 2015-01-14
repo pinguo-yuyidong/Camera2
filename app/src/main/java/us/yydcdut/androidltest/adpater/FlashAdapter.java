@@ -25,7 +25,7 @@ public class FlashAdapter {
         map1.put("text", "OFF");
         listItem.add(map1);
         HashMap<String, String> map2 = new HashMap<String, String>();
-        map2.put("text", "ON");
+        map2.put("text", "SINGLE");
         listItem.add(map2);
         HashMap<String, String> map3 = new HashMap<String, String>();
         map3.put("text", "TORCH");
@@ -33,6 +33,9 @@ public class FlashAdapter {
         HashMap<String, String> map4 = new HashMap<String, String>();
         map4.put("text", "AOTO");
         listItem.add(map4);
+        HashMap<String, String> map5 = new HashMap<String, String>();
+        map5.put("text", "ON");
+        listItem.add(map5);
         return listItem;
     }
 }

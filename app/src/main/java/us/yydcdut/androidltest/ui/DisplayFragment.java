@@ -95,6 +95,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
     private static final int SHOW_AWB = 3;
     private static final int SHOW_ISO = 4;
     private static final int SHOW_ZOOM = 5;
+    private static final int SHOW_ZOOM_2 = 6;
 
     private SharedPreferences mSp;
     private SharedPreferences.Editor mEditor;
@@ -195,6 +196,11 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
      * 是否显示zoom的按钮
      */
     private boolean showZoomFlag = false;
+
+    /**
+     * 是否显示zoom2的按钮
+     */
+    private boolean showZoomFlag2 = false;
     /**
      * 底部的layout
      */
@@ -304,7 +310,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
                     break;
                 case FOCUS_AGAIN:
                     Log.i("FOCUS_AGAIN", "FOCUS_AGAINFOCUS_AGAINFOCUS_AGAIN");
-                    mPreviewBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_PRECAPTURE_TRIGGER_START);
+                    mPreviewBuilder.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CameraMetadata.CONTROL_AE_PRECAPTURE_TRIGGER_START);
                     updatePreview();
                     break;
             }
@@ -403,6 +409,9 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         LinearLayout layoutZoom = (LinearLayout) v.findViewById(R.id.layout_zoom);
         SeekBar sbZoom = (SeekBar) v.findViewById(R.id.sb_zoom);
 
+        LinearLayout layoutZoom2 = (LinearLayout) v.findViewById(R.id.layout_zoom_2);
+        SeekBar sbZoom2 = (SeekBar) v.findViewById(R.id.sb_zoom_2);
+
         mLayoutCapture = (RelativeLayout) v.findViewById(R.id.layout_capture);
 
         ImageView btnSetting = (ImageView) v.findViewById(R.id.btn_setting);
@@ -413,6 +422,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         ImageView btnAwb = (ImageView) v.findViewById(R.id.btn_awb);
         ImageView btnIso = (ImageView) v.findViewById(R.id.btn_iso);
         ImageView btnZoom = (ImageView) v.findViewById(R.id.btn_zoom);
+        ImageView btnZoom2 = (ImageView) v.findViewById(R.id.btn_zoom_2);
         ImageView btnAlbum = (ImageView) v.findViewById(R.id.btn_album);
         ImageView btnFlashLight = (ImageView) v.findViewById(R.id.btn_flashlight);
         mBtnEffect = (ImageView) v.findViewById(R.id.btn_effect);
@@ -449,6 +459,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         btnAwb.setOnClickListener(this);
         btnIso.setOnClickListener(this);
         btnZoom.setOnClickListener(this);
+        btnZoom2.setOnClickListener(this);
         mBtnEffect.setOnClickListener(this);
         mBtnFlash.setOnClickListener(this);
         btnAlbum.setOnClickListener(this);
@@ -468,16 +479,19 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         sbAe.setOnSeekBarChangeListener(listener);
         sbIso.setOnSeekBarChangeListener(listener);
         sbZoom.setOnSeekBarChangeListener(listener);
+        sbZoom2.setOnSeekBarChangeListener(listener);
         sbAf.setEnabled(false);
         sbIso.setEnabled(false);
         sbAf.setMax(100);
         sbAe.setMax(100);
         sbIso.setMax(100);
         sbZoom.setMax(100);
+        sbZoom2.setMax(100);
         sbAf.setProgress(50);
         sbAe.setProgress(50);
         sbIso.setProgress(50);
         sbZoom.setProgress(0);
+        sbZoom2.setProgress(0);
         //list ,add
         mLayoutList = new ArrayList<View>();
         mLayoutList.add(mLayoutBottom);//位置0
@@ -486,6 +500,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         mLayoutList.add(layoutAwb);//位置3
         mLayoutList.add(mLayoutIso);//位置4
         mLayoutList.add(layoutZoom);//位置5
+        mLayoutList.add(layoutZoom2);//位置6
     }
 
     /**
@@ -588,10 +603,10 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         mCaptureBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, mPreviewBuilder.get(CaptureRequest.SENSOR_SENSITIVITY));
         //AF REGIONS
         mCaptureBuilder.set(CaptureRequest.CONTROL_AF_REGIONS, mPreviewBuilder.get(CaptureRequest.CONTROL_AF_REGIONS));
-        mCaptureBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AE_PRECAPTURE_TRIGGER_START);
+//        mCaptureBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START);
         //AE REGIONS
         mCaptureBuilder.set(CaptureRequest.CONTROL_AE_REGIONS, mPreviewBuilder.get(CaptureRequest.CONTROL_AE_REGIONS));
-        mCaptureBuilder.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CameraMetadata.CONTROL_AE_PRECAPTURE_TRIGGER_START);
+//        mCaptureBuilder.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CameraMetadata.CONTROL_AE_PRECAPTURE_TRIGGER_START);
         //SCENSE
         mCaptureBuilder.set(CaptureRequest.CONTROL_SCENE_MODE, mPreviewBuilder.get(CaptureRequest.CONTROL_SCENE_MODE));
         //zoom
@@ -649,7 +664,9 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
             mlargest = Collections.max(Arrays.asList(map.getOutputSizes(ImageFormat.RAW_SENSOR)), new CompareSizesByArea());
             mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height, mlargest);
         } else {
-            mPreviewSize = new Size(1280, 720);
+//            mPreviewSize = new Size(1280, 720);
+            mlargest = Collections.max(Arrays.asList(map.getOutputSizes(ImageFormat.JPEG)), new CompareSizesByArea());
+            mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height, mlargest);
         }
         int orientation = getResources().getConfiguration().orientation;
         if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
@@ -941,9 +958,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
         @Override
         public void onConfigureFailed(CameraCaptureSession cameraCaptureSession) {
             Log.i("CameraCaptureSession.StateCallback", "mSessionStateCallback--->onConfigureFailed");
-            //丢弃掉所有在队列中的拍照的数据
             Toast.makeText(getActivity(), "onConfigureFailed---Preview", Toast.LENGTH_SHORT).show();
-
         }
 
         @Override
@@ -1054,6 +1069,10 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
                 showZoomFlag = !showZoomFlag;
                 showLayout(SHOW_ZOOM, showZoomFlag);
                 break;
+            case R.id.btn_zoom_2:
+                showZoomFlag2 = !showZoomFlag2;
+                showLayout(SHOW_ZOOM_2, showZoomFlag2);
+                break;
             case R.id.btn_album:
                 getActivity().getFragmentManager().beginTransaction().replace(R.id.frame_main, AlbumFragment.newInstance()).addToBackStack(null).commit();
                 break;
@@ -1126,10 +1145,37 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
                 case R.id.sb_zoom:
                     Rect rect = mCameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
                     int radio = mCameraCharacteristics.get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM).intValue() / 2;
+                    int realRadio = mCameraCharacteristics.get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM).intValue();
                     int centerX = rect.centerX();
                     int centerY = rect.centerY();
-                    Rect newRect = new Rect((i * centerX / radio) / 100 + 8, (i * centerY / radio) / 100 + 16, rect.right - ((i * centerX) / 100 / radio) - 1, rect.bottom - ((i * centerY) / 100 / radio) - 1);
+                    int minMidth = (rect.right - ((i * centerX) / 100 / radio) - 1) - ((i * centerX / radio) / 100 + 8);
+                    int minHeight = (rect.bottom - ((i * centerY) / 100 / radio) - 1) - ((i * centerY / radio) / 100 + 16);
+                    if (minMidth < rect.right / realRadio || minHeight < rect.bottom / realRadio) {
+                        Log.i("sb_zoom", "sb_zoomsb_zoomsb_zoom");
+                        return;
+                    }
+//                    Rect newRect = new Rect(20, 20, rect.right - ((i * centerX) / 100 / radio) - 1, rect.bottom - ((i * centerY) / 100 / radio) - 1);
+//                    Log.i("sb_zoom", "left--->" + "20" + ",,,top--->" + "20" + ",,,right--->" + (rect.right - ((i * centerX) / 100 / radio) - 1) + ",,,bottom--->" + (rect.bottom - ((i * centerY) / 100 / radio) - 1));
+                    Rect newRect = new Rect((i * centerX / radio) / 100 + 40, (i * centerY / radio) / 100 + 40, rect.right - ((i * centerX) / 100 / radio) - 1, rect.bottom - ((i * centerY) / 100 / radio) - 1);
+                    Log.i("sb_zoom", "left--->" + ((i * centerX / radio) / 100 + 8) + ",,,top--->" + ((i * centerY / radio) / 100 + 16) + ",,,right--->" + (rect.right - ((i * centerX) / 100 / radio) - 1) + ",,,bottom--->" + (rect.bottom - ((i * centerY) / 100 / radio) - 1));
                     mPreviewBuilder.set(CaptureRequest.SCALER_CROP_REGION, newRect);
+                    mSeekBarTextView.setText("放大：" + i + "%");
+                    break;
+                case R.id.sb_zoom_2:
+                    Rect rect2 = mCameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
+                    int radio2 = mCameraCharacteristics.get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM).intValue() / 2;
+                    int realRadio2 = mCameraCharacteristics.get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM).intValue();
+                    int centerX2 = rect2.centerX();
+                    int centerY2 = rect2.centerY();
+                    int minMidth2 = (rect2.right - ((i * centerX2) / 100 / radio2) - 1) - 20;
+                    int minHeight2 = (rect2.bottom - ((i * centerY2) / 100 / radio2) - 1) - 20;
+                    if (minMidth2 < rect2.right / realRadio2 || minHeight2 < rect2.bottom / realRadio2) {
+                        Log.i("sb_zoom", "sb_zoomsb_zoomsb_zoom");
+                        return;
+                    }
+                    Rect newRect2 = new Rect(20, 20, rect2.right - ((i * centerX2) / 100 / radio2) - 1, rect2.bottom - ((i * centerY2) / 100 / radio2) - 1);
+                    Log.i("sb_zoom", "left--->" + "20" + ",,,top--->" + "20" + ",,,right--->" + (rect2.right - ((i * centerX2) / 100 / radio2) - 1) + ",,,bottom--->" + (rect2.bottom - ((i * centerY2) / 100 / radio2) - 1));
+                    mPreviewBuilder.set(CaptureRequest.SCALER_CROP_REGION, newRect2);
                     mSeekBarTextView.setText("放大：" + i + "%");
                     break;
             }

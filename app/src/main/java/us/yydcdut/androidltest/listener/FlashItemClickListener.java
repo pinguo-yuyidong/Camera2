@@ -43,16 +43,19 @@ public class FlashItemClickListener implements AdapterView.OnItemClickListener {
         switch (position) {
             case 0:
                 mBtnFlash.setImageResource(R.drawable.btn_flash_off);
+                mPreviewBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_ON);
                 mPreviewBuilder.set(CaptureRequest.FLASH_MODE, CameraMetadata.FLASH_MODE_OFF);
                 mAnimationTextView.start("OFF", DisplayFragment.WINDOW_TEXT_DISAPPEAR);
                 break;
             case 1:
                 mBtnFlash.setImageResource(R.drawable.btn_flash_on);
+                mPreviewBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_ON);
                 mPreviewBuilder.set(CaptureRequest.FLASH_MODE, CameraMetadata.FLASH_MODE_SINGLE);
                 mAnimationTextView.start("SINGLE", DisplayFragment.WINDOW_TEXT_DISAPPEAR);
                 break;
             case 2:
                 mBtnFlash.setImageResource(R.drawable.btn_flash_all_on);
+                mPreviewBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_ON);
                 mPreviewBuilder.set(CaptureRequest.FLASH_MODE, CameraMetadata.FLASH_MODE_TORCH);
                 mAnimationTextView.start("TORCH", DisplayFragment.WINDOW_TEXT_DISAPPEAR);
                 break;
@@ -60,6 +63,11 @@ public class FlashItemClickListener implements AdapterView.OnItemClickListener {
                 mBtnFlash.setImageResource(R.drawable.btn_flash_auto);
                 mPreviewBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_ON_AUTO_FLASH);
                 mAnimationTextView.start("AUTO_FLASH", DisplayFragment.WINDOW_TEXT_DISAPPEAR);
+                break;
+            case 4:
+                mBtnFlash.setImageResource(R.drawable.btn_flash_auto);
+                mPreviewBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_ON_ALWAYS_FLASH);
+                mAnimationTextView.start("ALWAYS_FLASH", DisplayFragment.WINDOW_TEXT_DISAPPEAR);
                 break;
         }
         updatePreview();

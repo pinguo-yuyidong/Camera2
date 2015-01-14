@@ -25,7 +25,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:layout_marginLeft="10dip"
+            android:layout_marginLeft="5dip"
             android:layout_marginRight="7dip"
             android:background="@drawable/bg_focus_start"/>
 
@@ -34,7 +34,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:layout_marginLeft="10dip"
+            android:layout_marginLeft="5dip"
             android:layout_marginRight="5dip"
             android:background="@drawable/btn_ae"/>
 
@@ -43,7 +43,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:layout_marginLeft="10dip"
+            android:layout_marginLeft="5dip"
             android:layout_marginRight="5dip"
             android:background="@drawable/btn_awb"/>
 
@@ -52,7 +52,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:layout_marginLeft="10dip"
+            android:layout_marginLeft="5dip"
             android:layout_marginRight="5dip"
             android:background="@drawable/btn_iso"/>
 
@@ -64,11 +64,18 @@
             android:background="@drawable/btn_zoom"/>
 
         <ImageView
+            android:id="@+id/btn_zoom_2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:background="@drawable/btn_zoom"/>
+
+        <ImageView
             android:id="@+id/btn_effect"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:layout_marginLeft="10dip"
+            android:layout_marginLeft="5dip"
             android:layout_marginRight="5dip"
             android:background="@drawable/btn_effect"/>
 
@@ -151,7 +158,8 @@
                 android:layout_centerVertical="true"
                 android:layout_marginRight="15dip"
                 android:layout_toLeftOf="@+id/btn_setting"
-                android:background="@drawable/btn_flashlight"/>
+                android:background="@drawable/btn_flashlight"
+                android:visibility="gone"/>
 
             <ImageView
                 android:id="@+id/btn_setting"
@@ -229,6 +237,25 @@
 
             <SeekBar
                 android:id="@+id/sb_zoom"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginTop="5dip"
+                android:gravity="center"/>
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/layout_zoom_2"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:layout_centerVertical="true"
+            android:orientation="vertical"
+            android:visibility="invisible">
+
+            <SeekBar
+                android:id="@+id/sb_zoom_2"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"

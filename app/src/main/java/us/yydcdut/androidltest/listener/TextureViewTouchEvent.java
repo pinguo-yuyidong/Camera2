@@ -40,6 +40,7 @@ public class TextureViewTouchEvent implements MyTextureView.MyTextureViewTouchEv
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 Rect rect = mCameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
+                Log.i("SENSOR_INFO_ACTIVE_ARRAY_SIZE", "rect.left--->" + rect.left + ",,,rect.top--->" + rect.top + ",,,,rect.right--->" + rect.right + ",,,,rect.bottom---->" + rect.bottom);
                 int areaSize = 200;
                 int right = rect.right;
                 int bottom = rect.bottom;
@@ -67,6 +68,8 @@ public class TextureViewTouchEvent implements MyTextureView.MyTextureViewTouchEv
             case MotionEvent.ACTION_UP:
                 int hardWare = mCameraCharacteristics.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL);
                 Log.i("ACTION_UP", "INFO_SUPPORTED_HARDWARE_LEVEL--->" + hardWare);
+                int max_awb = mCameraCharacteristics.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AWB);
+                Log.i("ACTION_UP", "CONTROL_MAX_REGIONS_AWB--->" + max_awb);
                 break;
         }
         return true;
