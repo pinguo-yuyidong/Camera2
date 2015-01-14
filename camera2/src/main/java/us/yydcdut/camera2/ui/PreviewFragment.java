@@ -3,6 +3,7 @@ package us.yydcdut.camera2.ui;
 import android.app.Activity;
 import android.app.Fragment;
 import android.content.Context;
+import android.content.Intent;
 import android.content.res.Configuration;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
@@ -24,6 +25,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
+import android.util.Range;
 import android.util.Size;
 import android.util.SparseIntArray;
 import android.view.LayoutInflater;
@@ -43,14 +45,16 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 import us.yydcdut.camera2.CompareSizesByArea;
+import us.yydcdut.camera2.DngImageSaver;
 import us.yydcdut.camera2.ImageSaver;
+import us.yydcdut.camera2.PreferenceHelper;
 import us.yydcdut.camera2.R;
 import us.yydcdut.camera2.view.AutoFitTextureView;
 
 /**
  * Created by yuyidong on 15-1-8.
  */
-public class PreviewFragment extends Fragment {
+public class PreviewFragment extends Fragment implements View.OnClickListener {
     private static final int STATE_PREVIEW = 0;
     private static final int STATE_WAITING_CAPTURE = 1;
     private static final int STATE_TRY_CAPTURE_AGAIN = 2;
@@ -122,11 +126,41 @@ public class PreviewFragment extends Fragment {
                 return true;
             }
         });
+        view.findViewById(R.id.btn_setting).setOnClickListener(this);
     }
 
     private void takePicture() throws CameraAccessException {
         mState = STATE_WAITING_CAPTURE;
-        mSession.setRepeatingRequest(mPreviewBuilder.build(), mSessionCaptureCallback, mPreviewHandler);
+        if (PreferenceHelper.getCameraFormat(getActivity()).equals("JPG")) {
+            mSession.setRepeatingRequest(mPreviewBuilder.build(), mSessionCaptureCallback, mPreviewHandler);
+        } else {
+            mSession.setRepeatingRequest(initDngBuilder().build(), mSessionDngCaptureCallback, mPreviewHandler);
+        }
+    }
+
+    private CaptureRequest.Builder initDngBuilder() {
+        CaptureRequest.Builder captureBuilder = null;
+        try {
+            captureBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
+
+            captureBuilder.addTarget(mImageReader.getSurface());
+            // Required for RAW capture
+            captureBuilder.set(CaptureRequest.STATISTICS_LENS_SHADING_MAP_MODE, CaptureRequest.STATISTICS_LENS_SHADING_MAP_MODE_ON);
+            captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF);
+            captureBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+            captureBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, (long) ((214735991 - 13231) / 2));
+            captureBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, 0);
+            captureBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, (10000 - 100) / 2);//设置 ISO，感光度
+            //设置每秒30帧
+            CameraManager cameraManager = (CameraManager) getActivity().getSystemService(Context.CAMERA_SERVICE);
+            CameraCharacteristics cameraCharacteristics = cameraManager.getCameraCharacteristics(mCameraId);
+            Range<Integer> fps[] = cameraCharacteristics.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
+            captureBuilder.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, fps[fps.length - 1]);
+        } catch (CameraAccessException e) {
+            Log.i("initDngBuilder", "initDngBuilder");
+            e.printStackTrace();
+        }
+        return captureBuilder;
     }
 
     private void initLooper() {
@@ -168,16 +202,21 @@ public class PreviewFragment extends Fragment {
         Activity activity = getActivity();
         CameraManager manager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
         try {
-            String cameraId = "0";
+
+            String cameraId = PreferenceHelper.getCameraId(getActivity());
             CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraId);
 
             StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-
-            Size largest = Collections.max(Arrays.asList(map.getOutputSizes(android.graphics.ImageFormat.JPEG)), new CompareSizesByArea());
-
-            initImageReader(largest, ImageFormat.JPEG);
-
-            mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height, largest);
+            Size largest;
+            if (PreferenceHelper.getCameraFormat(getActivity()).equals("JPEG")) {
+                largest = Collections.max(Arrays.asList(map.getOutputSizes(android.graphics.ImageFormat.JPEG)), new CompareSizesByArea());
+                initImageReader(largest, ImageFormat.JPEG);
+                mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height, largest);
+            } else {
+                largest = Collections.max(Arrays.asList(map.getOutputSizes(ImageFormat.RAW_SENSOR)), new CompareSizesByArea());
+                initImageReader(largest, ImageFormat.RAW_SENSOR);
+                mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height, largest);
+            }
 
             int orientation = getResources().getConfiguration().orientation;
             if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
@@ -193,19 +232,28 @@ public class PreviewFragment extends Fragment {
     }
 
     private void initImageReader(Size size, int format) {
-        mImageReader = ImageReader.newInstance(size.getWidth(), size.getHeight(), format, /*maxImages*/2);
-        mImageReader.setOnImageAvailableListener(mOnImageAvailableListener, mPreviewHandler);
+        mImageReader = ImageReader.newInstance(size.getWidth(), size.getHeight(), format, /*maxImages*/7);
+        if (format == ImageFormat.JPEG) {
+            mImageReader.setOnImageAvailableListener(mOnImageAvailableListener, mPreviewHandler);
+        } else {
+            mImageReader.setOnImageAvailableListener(mRawOnImageAvailableListener, mPreviewHandler);
+        }
     }
 
-    /**
-     * 保存照片
-     */
     private ImageReader.OnImageAvailableListener mOnImageAvailableListener = new ImageReader.OnImageAvailableListener() {
 
         @Override
         public void onImageAvailable(ImageReader reader) {
             new Thread(new ImageSaver(reader)).start();
             mMediaActionSound.play(MediaActionSound.SHUTTER_CLICK);
+        }
+    };
+    //    private Image mRawImage;
+    private ImageReader.OnImageAvailableListener mRawOnImageAvailableListener = new ImageReader.OnImageAvailableListener() {
+
+        @Override
+        public void onImageAvailable(ImageReader reader) {
+//            mRawImage = reader.acquireNextImage();
         }
     };
 
@@ -350,23 +398,36 @@ public class PreviewFragment extends Fragment {
         mSession.setRepeatingRequest(mPreviewBuilder.build(), mSessionCaptureCallback, mPreviewHandler);
     }
 
+    private CameraCaptureSession.CaptureCallback mSessionDngCaptureCallback = new CameraCaptureSession.CaptureCallback() {
+        @Override
+        public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
+            super.onCaptureCompleted(session, request, result);
+            Log.i("mSessionDngCaptureCallback", "mSessionDngCaptureCallback");
+            takeDngPicture(result);
+            mMediaActionSound.play(MediaActionSound.SHUTTER_CLICK);
+        }
+    };
+
     private CameraCaptureSession.CaptureCallback mSessionCaptureCallback = new CameraCaptureSession.CaptureCallback() {
         @Override
         public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
             super.onCaptureCompleted(session, request, result);
             mSession = session;
-            checkState(result);
+            if (!PreferenceHelper.getCameraFormat(getActivity()).equals("DNG")) {
+                checkState(result);
+            }
         }
 
         @Override
         public void onCaptureProgressed(CameraCaptureSession session, CaptureRequest request, CaptureResult partialResult) {
             super.onCaptureProgressed(session, request, partialResult);
             mSession = session;
-            checkState(partialResult);
+            if (!PreferenceHelper.getCameraFormat(getActivity()).equals("DNG")) {
+                checkState(partialResult);
+            }
         }
 
         private void checkState(CaptureResult result) {
-            Log.i("mSessionCaptureCallback", "checkState,,,mState--->" + mState);
             switch (mState) {
                 case STATE_PREVIEW:
                     // NOTHING
@@ -394,6 +455,9 @@ public class PreviewFragment extends Fragment {
                             aeState == CaptureResult.CONTROL_AE_STATE_PRECAPTURE ||
                             aeState == CaptureRequest.CONTROL_AE_STATE_FLASH_REQUIRED) {
                         mState = STATE_TRY_DO_CAPTURE;
+                    } else {
+                        mState = STATE_TRY_DO_CAPTURE;
+                        tryCaptureAgain();
                     }
                     break;
                 case STATE_TRY_DO_CAPTURE:
@@ -412,13 +476,32 @@ public class PreviewFragment extends Fragment {
         try {
             CaptureRequest.Builder captureBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
             captureBuilder.addTarget(mImageReader.getSurface());
-            captureBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
-            captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
+            if (PreferenceHelper.getCameraFormat(getActivity()).equals("DNG")) {
+                // Required for RAW capture
+                captureBuilder.set(CaptureRequest.STATISTICS_LENS_SHADING_MAP_MODE, CaptureRequest.STATISTICS_LENS_SHADING_MAP_MODE_ON);
+                captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF);
+                captureBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+                captureBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, (long) ((214735991 - 13231) / 2));
+                captureBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, 0);
+                captureBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, (10000 - 100) / 2);//设置 ISO，感光度
+            } else {
+                captureBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
+                captureBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+                captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
+
+            }
+            //设置每秒30帧
+            CameraManager cameraManager = (CameraManager) getActivity().getSystemService(Context.CAMERA_SERVICE);
+            CameraCharacteristics cameraCharacteristics = cameraManager.getCameraCharacteristics(mCameraId);
+            Range<Integer> fps[] = cameraCharacteristics.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
+            captureBuilder.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, fps[fps.length - 1]);
+
             int rotation = getActivity().getWindowManager().getDefaultDisplay().getRotation();
             captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, ORIENTATIONS.get(rotation));
             mSession.stopRepeating();
             mSession.setRepeatingRequest(captureBuilder.build(), new CameraCaptureSession.CaptureCallback() {
             }, mPreviewHandler);
+
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
@@ -434,5 +517,29 @@ public class PreviewFragment extends Fragment {
         }
     }
 
+    private void takeDngPicture(CaptureResult result) {
+        if (PreferenceHelper.getCameraFormat(getActivity()).equals("DNG")) {
+//            new Thread(new DngImageSaver(getActivity(), mImageReader, result)).start();
+            mPreviewHandler.post(new DngImageSaver(getActivity(), mImageReader, result));
+        }
+    }
 
+
+    @Override
+    public void onClick(View v) {
+        switch (v.getId()) {
+            case R.id.btn_setting:
+                Intent intent = new Intent(getActivity(), ChangeCameraActivity.class);
+                getActivity().startActivity(intent);
+                break;
+        }
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        mCameraOpenCloseLock.release();
+        mCameraDevice.close();
+        mCameraDevice = null;
+    }
 }

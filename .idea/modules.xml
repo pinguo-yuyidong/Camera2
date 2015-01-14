@@ -5,6 +5,7 @@
       <module fileurl="file://$PROJECT_DIR$/AndroidLTest.iml" filepath="$PROJECT_DIR$/AndroidLTest.iml" />
       <module fileurl="file://$PROJECT_DIR$/Camera2.iml" filepath="$PROJECT_DIR$/Camera2.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/camera2/camera2.iml" filepath="$PROJECT_DIR$/camera2/camera2.iml" />
     </modules>
   </component>
 </project>

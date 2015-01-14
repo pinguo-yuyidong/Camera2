@@ -12,13 +12,22 @@
 
 
     <ImageView
-        android:layout_marginBottom="20dip"
         android:id="@+id/btn_capture"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
+        android:layout_marginBottom="20dip"
         android:background="@drawable/btn_cam"/>
+
+    <ImageView
+        android:id="@+id/btn_setting"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentRight="true"
+        android:layout_margin="20dip"
+        android:background="@drawable/btn_setting_normal"/>
 
 
 </RelativeLayout>
