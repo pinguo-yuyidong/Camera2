@@ -131,10 +131,13 @@ public class PreviewFragment extends Fragment implements View.OnClickListener {
 
     private void takePicture() throws CameraAccessException {
         mState = STATE_WAITING_CAPTURE;
-        if (PreferenceHelper.getCameraFormat(getActivity()).equals("JPG")) {
+        Log.i("format", PreferenceHelper.getCameraFormat(getActivity()));
+        if (PreferenceHelper.getCameraFormat(getActivity()).equals("JPEG")) {
             mSession.setRepeatingRequest(mPreviewBuilder.build(), mSessionCaptureCallback, mPreviewHandler);
-        } else {
+        } else if (PreferenceHelper.getCameraFormat(getActivity()).equals("DNG")) {
             mSession.setRepeatingRequest(initDngBuilder().build(), mSessionDngCaptureCallback, mPreviewHandler);
+        } else {
+            mSession.setRepeatingRequest(mPreviewBuilder.build(), mSessionCaptureCallback, mPreviewHandler);
         }
     }
 
@@ -435,7 +438,8 @@ public class PreviewFragment extends Fragment implements View.OnClickListener {
                 case STATE_WAITING_CAPTURE:
                     int afState = result.get(CaptureResult.CONTROL_AF_STATE);
                     Log.i("checkState", "afState--->" + afState);
-                    if (CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED == afState || CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED == afState) {
+                    if (CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED == afState || CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED == afState
+                            || CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED == afState || CaptureResult.CONTROL_AF_STATE_PASSIVE_UNFOCUSED == afState) {
                         Integer aeState = result.get(CaptureResult.CONTROL_AE_STATE);
                         Log.i("checkState", "进来了一层,aeState--->" + aeState);
                         if (aeState == null || aeState == CaptureResult.CONTROL_AE_STATE_CONVERGED) {
@@ -443,10 +447,9 @@ public class PreviewFragment extends Fragment implements View.OnClickListener {
                             mState = STATE_TRY_DO_CAPTURE;
                             doStillCapture();
                         } else {
+                            mState = STATE_TRY_CAPTURE_AGAIN;
                             tryCaptureAgain();
                         }
-                    } else {
-                        tryCaptureAgain();
                     }
                     break;
                 case STATE_TRY_CAPTURE_AGAIN:
@@ -455,9 +458,6 @@ public class PreviewFragment extends Fragment implements View.OnClickListener {
                             aeState == CaptureResult.CONTROL_AE_STATE_PRECAPTURE ||
                             aeState == CaptureRequest.CONTROL_AE_STATE_FLASH_REQUIRED) {
                         mState = STATE_TRY_DO_CAPTURE;
-                    } else {
-                        mState = STATE_TRY_DO_CAPTURE;
-                        tryCaptureAgain();
                     }
                     break;
                 case STATE_TRY_DO_CAPTURE:
@@ -509,7 +509,6 @@ public class PreviewFragment extends Fragment implements View.OnClickListener {
 
     private void tryCaptureAgain() {
         mPreviewBuilder.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_START);
-        mState = STATE_TRY_DO_CAPTURE;
         try {
             mSession.capture(mPreviewBuilder.build(), mSessionCaptureCallback, mPreviewHandler);
         } catch (CameraAccessException e) {
