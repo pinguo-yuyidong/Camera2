@@ -85,6 +85,17 @@ public class PreviewFragment extends Fragment implements View.OnClickListener {
         ORIENTATIONS.append(Surface.ROTATION_270, 180);
     }
 
+    private Bitmap mFrameBitmap;
+    private Handler mMainHandler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            super.handleMessage(msg);
+            if (mBtnCapture != null) {
+                mView.setImageBitmap(mFrameBitmap);
+            }
+        }
+    };
+
     public static PreviewFragment newInstance() {
         PreviewFragment fragment = new PreviewFragment();
         fragment.setRetainInstance(true);
@@ -414,14 +425,8 @@ public class PreviewFragment extends Fragment implements View.OnClickListener {
             mMediaActionSound.play(MediaActionSound.SHUTTER_CLICK);
         }
     };
-    private Handler mMainHandler = new Handler() {
-        @Override
-        public void handleMessage(Message msg) {
-            super.handleMessage(msg);
-            mView.setImageBitmap(mBitmap);
-        }
-    };
-    private Bitmap mBitmap;
+
+
     private CameraCaptureSession.CaptureCallback mSessionCaptureCallback = new CameraCaptureSession.CaptureCallback() {
         @Override
         public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
@@ -442,7 +447,7 @@ public class PreviewFragment extends Fragment implements View.OnClickListener {
         }
 
         private void checkState(CaptureResult result) {
-            mBitmap = mPreviewView.getBitmap();
+            mFrameBitmap = mPreviewView.getBitmap();
             mMainHandler.sendEmptyMessage(1);
             switch (mState) {
                 case STATE_PREVIEW:

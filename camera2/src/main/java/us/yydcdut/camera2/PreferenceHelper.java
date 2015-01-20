@@ -9,8 +9,15 @@ import android.content.SharedPreferences;
 public class PreferenceHelper {
 
     public static String getCameraId(Context context) {
-        SharedPreferences preferences = context.getSharedPreferences("CameraConfig", Context.MODE_PRIVATE);
-        return preferences.getString("camera", "0");
+        SharedPreferences preferences;
+        String cameraid;
+        if (context != null) {
+            preferences = context.getSharedPreferences("CameraConfig", Context.MODE_PRIVATE);
+            cameraid = preferences.getString("camera", "0");
+        } else {
+            cameraid = "0";
+        }
+        return cameraid;
     }
 
     public static void writeCameraId(Context context, String value) {
@@ -21,8 +28,15 @@ public class PreferenceHelper {
     }
 
     public static String getCameraFormat(Context context) {
-        SharedPreferences preferences = context.getSharedPreferences("CameraConfig", Context.MODE_PRIVATE);
-        return preferences.getString("format", "JPEG");
+        SharedPreferences preferences;
+        String format;
+        if (context != null) {
+            preferences = context.getSharedPreferences("CameraConfig", Context.MODE_PRIVATE);
+            format = preferences.getString("format", "JPEG");
+        } else {
+            format = "JPEG";
+        }
+        return format;
     }
 
     public static void writeCameraFormat(Context context, String value) {
