@@ -5,6 +5,7 @@ import android.app.Fragment;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.Configuration;
+import android.graphics.Bitmap;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.RectF;
@@ -24,6 +25,7 @@ import android.media.MediaActionSound;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.Message;
 import android.util.Log;
 import android.util.Range;
 import android.util.Size;
@@ -63,6 +65,7 @@ public class PreviewFragment extends Fragment implements View.OnClickListener {
     private Handler mPreviewHandler;
     private HandlerThread mHandlerThread;
     private AutoFitTextureView mPreviewView;
+    private ImageView mView;
     private ImageReader mImageReader;
     private Size mPreviewSize;
     private String mCameraId;
@@ -103,6 +106,7 @@ public class PreviewFragment extends Fragment implements View.OnClickListener {
     public void onViewCreated(View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         mPreviewView = (AutoFitTextureView) view.findViewById(R.id.texture);
+        mView = (ImageView) view.findViewById(R.id.view);
         mBtnCapture = (ImageView) view.findViewById(R.id.btn_capture);
         mBtnCapture.setOnTouchListener(new View.OnTouchListener() {
             @Override
@@ -410,7 +414,14 @@ public class PreviewFragment extends Fragment implements View.OnClickListener {
             mMediaActionSound.play(MediaActionSound.SHUTTER_CLICK);
         }
     };
-
+    private Handler mMainHandler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            super.handleMessage(msg);
+            mView.setImageBitmap(mBitmap);
+        }
+    };
+    private Bitmap mBitmap;
     private CameraCaptureSession.CaptureCallback mSessionCaptureCallback = new CameraCaptureSession.CaptureCallback() {
         @Override
         public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
@@ -431,6 +442,8 @@ public class PreviewFragment extends Fragment implements View.OnClickListener {
         }
 
         private void checkState(CaptureResult result) {
+            mBitmap = mPreviewView.getBitmap();
+            mMainHandler.sendEmptyMessage(1);
             switch (mState) {
                 case STATE_PREVIEW:
                     // NOTHING

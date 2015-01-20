@@ -29,5 +29,13 @@
         android:layout_margin="20dip"
         android:background="@drawable/btn_setting_normal"/>
 
+    <ImageView
+        android:id="@+id/view"
+        android:layout_width="wrap_content"
+        android:layout_height="100dip"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentLeft="true"
+        android:layout_toLeftOf="@+id/btn_capture"/>
+
 
 </RelativeLayout>
