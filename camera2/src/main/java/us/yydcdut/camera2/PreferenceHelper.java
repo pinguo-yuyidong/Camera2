@@ -45,4 +45,23 @@ public class PreferenceHelper {
         editor.putString("format", value);
         editor.commit();
     }
+
+    public static String getFrame(Context context) {
+        SharedPreferences preferences;
+        String frame;
+        if (context != null) {
+            preferences = context.getSharedPreferences("CameraConfig", Context.MODE_PRIVATE);
+            frame = preferences.getString("frame", "close");
+        } else {
+            frame = "close";
+        }
+        return frame;
+    }
+
+    public static void writeFrame(Context context, String value) {
+        SharedPreferences preferences = context.getSharedPreferences("CameraConfig", Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putString("frame", value);
+        editor.commit();
+    }
 }

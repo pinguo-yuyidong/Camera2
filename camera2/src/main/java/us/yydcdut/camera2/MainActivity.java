@@ -13,6 +13,7 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         getFragmentManager().beginTransaction().replace(R.id.layout_frame_main, PreviewFragment.newInstance()).commit();
+//        getFragmentManager().beginTransaction().replace(R.id.layout_frame_main, new YUVCameraFragment()).commit();
     }
 
 

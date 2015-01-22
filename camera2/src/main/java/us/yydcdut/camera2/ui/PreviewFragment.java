@@ -117,6 +117,7 @@ public class PreviewFragment extends Fragment implements View.OnClickListener {
     public void onViewCreated(View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         mPreviewView = (AutoFitTextureView) view.findViewById(R.id.texture);
+//        mPreviewView.setAlpha(0.0f);
         mView = (ImageView) view.findViewById(R.id.view);
         mBtnCapture = (ImageView) view.findViewById(R.id.btn_capture);
         mBtnCapture.setOnTouchListener(new View.OnTouchListener() {
@@ -258,6 +259,7 @@ public class PreviewFragment extends Fragment implements View.OnClickListener {
         }
     }
 
+
     private ImageReader.OnImageAvailableListener mOnImageAvailableListener = new ImageReader.OnImageAvailableListener() {
 
         @Override
@@ -272,6 +274,8 @@ public class PreviewFragment extends Fragment implements View.OnClickListener {
         @Override
         public void onImageAvailable(ImageReader reader) {
 //            mRawImage = reader.acquireNextImage();
+            takeDngPicture(mDngResult, reader);
+            mMediaActionSound.play(MediaActionSound.SHUTTER_CLICK);
         }
     };
 
@@ -378,8 +382,15 @@ public class PreviewFragment extends Fragment implements View.OnClickListener {
     private void createCameraPreviewSession() throws CameraAccessException {
         initSurface();
         mPreviewBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+
         mPreviewBuilder.addTarget(mSurface);
         mState = STATE_PREVIEW;
+//        if (PreferenceHelper.getFrame(getActivity()).equals("close")) {
+//            mCameraDevice.createCaptureSession(Arrays.asList(mSurface, mImageReader.getSurface()), mSessionPreviewStateCallback, mPreviewHandler);
+//        } else {
+//            mPreviewBuilder.addTarget(mFrameImageReader.getSurface());
+//            mCameraDevice.createCaptureSession(Arrays.asList(mSurface, mFrameImageReader.getSurface()), mSessionPreviewStateCallback, mPreviewHandler);
+//        }
         mCameraDevice.createCaptureSession(Arrays.asList(mSurface, mImageReader.getSurface()), mSessionPreviewStateCallback, mPreviewHandler);
     }
 
@@ -416,30 +427,30 @@ public class PreviewFragment extends Fragment implements View.OnClickListener {
         mSession.setRepeatingRequest(mPreviewBuilder.build(), mSessionCaptureCallback, mPreviewHandler);
     }
 
+    private TotalCaptureResult mDngResult;
     private CameraCaptureSession.CaptureCallback mSessionDngCaptureCallback = new CameraCaptureSession.CaptureCallback() {
         @Override
         public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
             super.onCaptureCompleted(session, request, result);
             Log.i("mSessionDngCaptureCallback", "mSessionDngCaptureCallback");
-            takeDngPicture(result);
-            mMediaActionSound.play(MediaActionSound.SHUTTER_CLICK);
+            mDngResult = result;
+//            takeDngPicture(result);
+//            mMediaActionSound.play(MediaActionSound.SHUTTER_CLICK);
         }
     };
-
-
     private CameraCaptureSession.CaptureCallback mSessionCaptureCallback = new CameraCaptureSession.CaptureCallback() {
+
         @Override
         public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
-            super.onCaptureCompleted(session, request, result);
             mSession = session;
             if (!PreferenceHelper.getCameraFormat(getActivity()).equals("DNG")) {
                 checkState(result);
             }
+
         }
 
         @Override
         public void onCaptureProgressed(CameraCaptureSession session, CaptureRequest request, CaptureResult partialResult) {
-            super.onCaptureProgressed(session, request, partialResult);
             mSession = session;
             if (!PreferenceHelper.getCameraFormat(getActivity()).equals("DNG")) {
                 checkState(partialResult);
@@ -517,10 +528,10 @@ public class PreviewFragment extends Fragment implements View.OnClickListener {
         }
     }
 
-    private void takeDngPicture(CaptureResult result) {
+    private void takeDngPicture(CaptureResult result, ImageReader reader) {
         if (PreferenceHelper.getCameraFormat(getActivity()).equals("DNG")) {
 //            new Thread(new DngImageSaver(getActivity(), mImageReader, result)).start();
-            mPreviewHandler.post(new DngImageSaver(getActivity(), mImageReader, result));
+            mPreviewHandler.post(new DngImageSaver(getActivity(), reader, result));
         }
     }
 
@@ -541,5 +552,10 @@ public class PreviewFragment extends Fragment implements View.OnClickListener {
         mCameraOpenCloseLock.release();
         mCameraDevice.close();
         mCameraDevice = null;
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
     }
 }

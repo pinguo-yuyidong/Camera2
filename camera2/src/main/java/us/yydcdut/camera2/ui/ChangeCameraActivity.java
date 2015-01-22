@@ -38,6 +38,15 @@ public class ChangeCameraActivity extends Activity {
             mSwitchCameraFormat.setChecked(true);
         }
         mSwitchCameraFormat.setOnCheckedChangeListener(mListener);
+
+        Switch switchFrame = (Switch) findViewById(R.id.switch_frame);
+        String frame = PreferenceHelper.getFrame(mContext);
+        if (frame.equals("close")) {
+            switchFrame.setChecked(false);
+        } else {
+            switchFrame.setChecked(true);
+        }
+        switchFrame.setOnCheckedChangeListener(mListener);
     }
 
     private CompoundButton.OnCheckedChangeListener mListener = new CompoundButton.OnCheckedChangeListener() {
@@ -59,6 +68,13 @@ public class ChangeCameraActivity extends Activity {
                         PreferenceHelper.writeCameraFormat(mContext, "JPEG");
                     } else {
                         PreferenceHelper.writeCameraFormat(mContext, "DNG");
+                    }
+                    break;
+                case R.id.switch_frame:
+                    if (isChecked == false) {
+                        PreferenceHelper.writeFrame(mContext, "close");
+                    } else {
+                        PreferenceHelper.writeFrame(mContext, "open");
                     }
                     break;
             }
