@@ -385,12 +385,6 @@ public class PreviewFragment extends Fragment implements View.OnClickListener {
 
         mPreviewBuilder.addTarget(mSurface);
         mState = STATE_PREVIEW;
-//        if (PreferenceHelper.getFrame(getActivity()).equals("close")) {
-//            mCameraDevice.createCaptureSession(Arrays.asList(mSurface, mImageReader.getSurface()), mSessionPreviewStateCallback, mPreviewHandler);
-//        } else {
-//            mPreviewBuilder.addTarget(mFrameImageReader.getSurface());
-//            mCameraDevice.createCaptureSession(Arrays.asList(mSurface, mFrameImageReader.getSurface()), mSessionPreviewStateCallback, mPreviewHandler);
-//        }
         mCameraDevice.createCaptureSession(Arrays.asList(mSurface, mImageReader.getSurface()), mSessionPreviewStateCallback, mPreviewHandler);
     }
 
