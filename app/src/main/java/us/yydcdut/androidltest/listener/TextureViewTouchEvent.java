@@ -70,6 +70,10 @@ public class TextureViewTouchEvent implements MyTextureView.MyTextureViewTouchEv
                 Log.i("ACTION_UP", "INFO_SUPPORTED_HARDWARE_LEVEL--->" + hardWare);
                 int max_awb = mCameraCharacteristics.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AWB);
                 Log.i("ACTION_UP", "CONTROL_MAX_REGIONS_AWB--->" + max_awb);
+                int[] scenceSupport = mCameraCharacteristics.get(CameraCharacteristics.CONTROL_AVAILABLE_SCENE_MODES);
+                for (int i = 0; i < scenceSupport.length; i++) {
+                    Log.i("ACTION_UP", "scenceSupport--->" + scenceSupport[i]);
+                }
                 break;
         }
         return true;

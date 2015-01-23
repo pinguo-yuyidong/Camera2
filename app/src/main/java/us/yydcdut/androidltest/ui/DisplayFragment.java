@@ -920,6 +920,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
 
         @Override
         public void onOpened(CameraDevice cameraDevice) {
+            Log.i("Thread", "onOpened---->" + Thread.currentThread().getName());
             Log.i("CameraDevice.StateCallback", "onOpened");
             mCameraDevice = cameraDevice;
             startPreview();
@@ -945,6 +946,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
     private CameraCaptureSession.StateCallback mSessionPreviewStateCallback = new CameraCaptureSession.StateCallback() {
         @Override
         public void onConfigured(CameraCaptureSession cameraCaptureSession) {
+            Log.i("Thread", "onConfigured---->" + Thread.currentThread().getName());
             Log.i("CameraCaptureSession.StateCallback", "mSessionStateCallback--->onConfigured");
             try {
                 mCameraCaptureSession = cameraCaptureSession;
@@ -1163,7 +1165,7 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
                     break;
                 case R.id.sb_zoom_2:
                     Rect rect2 = mCameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
-                    int radio2 = mCameraCharacteristics.get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM).intValue() / 2;
+                    int radio2 = mCameraCharacteristics.get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM).intValue() / 3;
                     int realRadio2 = mCameraCharacteristics.get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM).intValue();
                     int centerX2 = rect2.centerX();
                     int centerY2 = rect2.centerY();

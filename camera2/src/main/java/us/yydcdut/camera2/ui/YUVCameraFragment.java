@@ -4,15 +4,20 @@ import android.app.Activity;
 import android.app.Fragment;
 import android.content.Context;
 import android.content.res.Configuration;
+import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
+import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
+import android.hardware.camera2.CameraMetadata;
+import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.os.Bundle;
+import android.renderscript.RenderScript;
 import android.util.Size;
 import android.view.LayoutInflater;
 import android.view.Surface;
@@ -26,6 +31,7 @@ import java.util.Collections;
 import java.util.List;
 
 import us.yydcdut.camera2.CompareSizesByArea;
+import us.yydcdut.camera2.Progress;
 import us.yydcdut.camera2.R;
 import us.yydcdut.camera2.view.AutoFitTextureView;
 
@@ -36,6 +42,9 @@ public class YUVCameraFragment extends Fragment {
     private AutoFitTextureView mPreviewView;
     private Size mPreviewSize;
     private String mCameraId;
+    private CaptureRequest.Builder mBuilder;
+    private RenderScript mRS;
+    private Progress mProcessor;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -52,12 +61,24 @@ public class YUVCameraFragment extends Fragment {
         mPreviewView.setSurfaceTextureListener(mSurfaceTextureListener);
     }
 
+    private Surface mInputSurface;
     private TextureView.SurfaceTextureListener mSurfaceTextureListener = new TextureView.SurfaceTextureListener() {
 
         @Override
         public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
             setUpCameraOutputs(width, height);
             configureTransform(width, height);
+            mRS = RenderScript.create(getActivity());
+            mProcessor = new Progress(mRS, mPreviewSize);
+
+            SurfaceTexture texture = mPreviewView.getSurfaceTexture();
+            assert texture != null;
+            texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
+            mPreviewSurface = new Surface(texture);
+
+            mProcessor.setOutputSurface(mPreviewSurface);
+            mInputSurface = mProcessor.getInputNormalSurface();
+
             CameraManager cameraManager = (CameraManager) getActivity().getSystemService(Context.CAMERA_SERVICE);
             try {
                 cameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, null);
@@ -91,7 +112,7 @@ public class YUVCameraFragment extends Fragment {
             String cameraId = "0";
             CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraId);
             StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-            Size largest = Collections.max(Arrays.asList(map.getOutputSizes(android.graphics.ImageFormat.JPEG)), new CompareSizesByArea());
+            Size largest = Collections.max(Arrays.asList(map.getOutputSizes(ImageFormat.JPEG)), new CompareSizesByArea());
             mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class), width, height, largest);
             int orientation = getResources().getConfiguration().orientation;
             if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
@@ -116,7 +137,6 @@ public class YUVCameraFragment extends Fragment {
                 bigEnough.add(option);
             }
         }
-
         if (bigEnough.size() > 0) {
             return Collections.min(bigEnough, new CompareSizesByArea());
         } else {
@@ -152,6 +172,11 @@ public class YUVCameraFragment extends Fragment {
 
         @Override
         public void onOpened(CameraDevice camera) {
+            try {
+                createSession(camera);
+            } catch (CameraAccessException e) {
+                e.printStackTrace();
+            }
         }
 
         @Override
@@ -164,6 +189,31 @@ public class YUVCameraFragment extends Fragment {
 
         }
     };
+    private Surface mPreviewSurface;
+
+    private void createSession(CameraDevice camera) throws CameraAccessException {
+        mBuilder = camera.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+        mBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
+        mBuilder.addTarget(mInputSurface);
+        camera.createCaptureSession(Arrays.asList(mInputSurface), mCameraCaptureSessionStateCallback, null);
+    }
+
+    private CameraCaptureSession.StateCallback mCameraCaptureSessionStateCallback = new CameraCaptureSession.StateCallback() {
+
+        @Override
+        public void onConfigured(CameraCaptureSession session) {
+            try {
+                session.setRepeatingRequest(mBuilder.build(), null, null);
+            } catch (CameraAccessException e) {
+                e.printStackTrace();
+            }
+        }
+
+        @Override
+        public void onConfigureFailed(CameraCaptureSession session) {
+        }
+    };
 
 
 }
+

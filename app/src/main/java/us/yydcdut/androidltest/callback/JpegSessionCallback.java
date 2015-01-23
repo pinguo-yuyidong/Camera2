@@ -9,8 +9,6 @@ import android.media.MediaActionSound;
 import android.os.Handler;
 import android.util.Log;
 
-import us.yydcdut.androidltest.ui.DisplayFragment;
-
 /**
  * Created by yuyidong on 14-12-17.
  */
@@ -34,12 +32,14 @@ public class JpegSessionCallback extends CameraCaptureSession.CaptureCallback {
         if (afState == null || aeState == null) {
             return;
         }
+        //todo:这里处理的不是很完善
         Log.i("JpegSessionCallback", "要开始进入了,,afState.intValue()--->" + afState.intValue());
         //聚焦完成才能拍照
-        if (afState.intValue() == CameraMetadata.CONTROL_AF_STATE_FOCUSED_LOCKED || afState.intValue() == CameraMetadata.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED) {
+        if (afState.intValue() == CameraMetadata.CONTROL_AF_STATE_FOCUSED_LOCKED || afState.intValue() == CameraMetadata.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED
+                || CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED == afState.intValue() || CaptureResult.CONTROL_AF_STATE_PASSIVE_UNFOCUSED == afState.intValue()) {
             Log.i("JpegSessionCallback", "进去了一层,,aeState.intValue()--->" + aeState.intValue());
-            if (aeState.intValue() == CameraMetadata.CONTROL_AE_STATE_LOCKED || aeState == CameraMetadata.CONTROL_AE_STATE_PRECAPTURE
-                    || aeState.intValue() == CameraMetadata.CONTROL_AE_STATE_FLASH_REQUIRED) {
+            if (aeState.intValue() == CameraMetadata.CONTROL_AE_STATE_LOCKED || aeState.intValue() == CameraMetadata.CONTROL_AE_STATE_PRECAPTURE
+                    || aeState.intValue() == CameraMetadata.CONTROL_AE_STATE_FLASH_REQUIRED || aeState.intValue() == CameraMetadata.CONTROL_AE_STATE_CONVERGED) {
                 Log.i("JpegSessionCallback", "进去了两层");
                 mHandler.post(new Runnable() {
                     @Override
@@ -48,10 +48,8 @@ public class JpegSessionCallback extends CameraCaptureSession.CaptureCallback {
                     }
                 });
             } else {
-                mMainHanler.sendEmptyMessage(DisplayFragment.FOCUS_AGAIN);
+//                mMainHanler.sendEmptyMessage(DisplayFragment.FOCUS_AGAIN);
             }
-        } else {
-            mMainHanler.sendEmptyMessage(DisplayFragment.FOCUS_AGAIN);
         }
     }
 }

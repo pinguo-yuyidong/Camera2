@@ -63,7 +63,6 @@ public class AlbumFragment extends Fragment implements View.OnClickListener {
     private void initImageLoader() {
         mOptions = new DisplayImageOptions.Builder()
                 .showImageForEmptyUri(R.drawable.ic_launcher)
-                .showImageOnFail(R.drawable.ic_launcher)
                 .showStubImage(R.drawable.ic_launcher)
                 .cacheInMemory(true)
                 .bitmapConfig(Bitmap.Config.RGB_565)
@@ -125,6 +124,7 @@ public class AlbumFragment extends Fragment implements View.OnClickListener {
 
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {
+            Log.i("getView", "position--->" + position);
             ViewHolder vh;
             if (convertView == null) {
                 vh = new ViewHolder();

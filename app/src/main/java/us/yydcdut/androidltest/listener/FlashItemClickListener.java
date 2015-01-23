@@ -40,6 +40,7 @@ public class FlashItemClickListener implements AdapterView.OnItemClickListener {
 
     @Override
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+        mPreviewBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
         switch (position) {
             case 0:
                 mBtnFlash.setImageResource(R.drawable.btn_flash_off);

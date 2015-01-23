@@ -6,6 +6,7 @@ import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.TotalCaptureResult;
 import android.os.Handler;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.ViewGroup;
 import android.widget.RelativeLayout;
@@ -33,7 +34,8 @@ public class PreviewSessionCallback extends CameraCaptureSession.CaptureCallback
     @Override
     public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, final TotalCaptureResult result) {
         super.onCaptureCompleted(session, request, result);
-        //这样就可以操作focus的imageview了
+        Log.i("Thread", "onCaptureCompleted---->" + Thread.currentThread().getName());
+        Log.i("PreviewSessionCallback", "onCaptureCompleted");
         Integer nowAfState = result.get(CaptureResult.CONTROL_AF_STATE);
         //获取失败
         if (nowAfState == null) {
@@ -55,36 +57,55 @@ public class PreviewSessionCallback extends CameraCaptureSession.CaptureCallback
     private void judgeFocus() {
         switch (mAfState) {
             case CameraMetadata.CONTROL_AF_STATE_ACTIVE_SCAN:
-                //得到宽高
-                int width = mFocusImage.getWidth();
-                int height = mFocusImage.getHeight();
-                //居中
-                ViewGroup.MarginLayoutParams margin = new ViewGroup.MarginLayoutParams(mFocusImage.getLayoutParams());
-                margin.setMargins(mRawX - width / 2, mRawY - height / 2, margin.rightMargin, margin.bottomMargin);
-                RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(margin);
-                mFocusImage.setLayoutParams(layoutParams);
-                //显示
-                if (mFlagShowFocusImage == false) {
-                    mFocusImage.startFocusing();
-                    mFlagShowFocusImage = true;
-                }
+            case CameraMetadata.CONTROL_AF_STATE_PASSIVE_SCAN:
+                focusFocusing();
                 break;
             case CameraMetadata.CONTROL_AF_STATE_FOCUSED_LOCKED:
-                if (mFlagShowFocusImage == true) {
-                    mFocusImage.focusSuccess();
-                    mFlagShowFocusImage = false;
-                }
+            case CameraMetadata.CONTROL_AF_STATE_PASSIVE_FOCUSED:
+                focusSucceed();
                 break;
             case CameraMetadata.CONTROL_AF_STATE_INACTIVE:
-                mFocusImage.stopFocus();
-                mFlagShowFocusImage = false;
+                focusInactive();
                 break;
             case CameraMetadata.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED:
-                if (mFlagShowFocusImage == true) {
-                    mFocusImage.focusFailed();
-                    mFlagShowFocusImage = false;
-                }
+            case CameraMetadata.CONTROL_AF_STATE_PASSIVE_UNFOCUSED:
+                focusFailed();
                 break;
+        }
+    }
+
+    private void focusFocusing() {
+        //得到宽高
+        int width = mFocusImage.getWidth();
+        int height = mFocusImage.getHeight();
+        //居中
+        ViewGroup.MarginLayoutParams margin = new ViewGroup.MarginLayoutParams(mFocusImage.getLayoutParams());
+        margin.setMargins(mRawX - width / 2, mRawY - height / 2, margin.rightMargin, margin.bottomMargin);
+        RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(margin);
+        mFocusImage.setLayoutParams(layoutParams);
+        //显示
+        if (mFlagShowFocusImage == false) {
+            mFocusImage.startFocusing();
+            mFlagShowFocusImage = true;
+        }
+    }
+
+    private void focusSucceed() {
+        if (mFlagShowFocusImage == true) {
+            mFocusImage.focusSuccess();
+            mFlagShowFocusImage = false;
+        }
+    }
+
+    private void focusInactive() {
+        mFocusImage.stopFocus();
+        mFlagShowFocusImage = false;
+    }
+
+    private void focusFailed() {
+        if (mFlagShowFocusImage == true) {
+            mFocusImage.focusFailed();
+            mFlagShowFocusImage = false;
         }
     }
 
