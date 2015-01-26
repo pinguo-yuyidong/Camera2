@@ -1,5 +1,6 @@
 package us.yydcdut.camera2;
 
+import android.graphics.Bitmap;
 import android.graphics.ImageFormat;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -7,7 +8,6 @@ import android.renderscript.Allocation;
 import android.renderscript.Element;
 import android.renderscript.RenderScript;
 import android.renderscript.Type;
-import android.util.Log;
 import android.util.Size;
 import android.view.Surface;
 
@@ -23,8 +23,10 @@ public class Progress {
     private Handler mProcessingHandler;
     private ScriptC_Normal mScriptC;
 
-    public Progress(RenderScript rs, Size dimensions) {
+    private GetFrameBitmap mGetFrameBitmap;
 
+    public Progress(RenderScript rs, Size dimensions, GetFrameBitmap mGetFrameBitmap) {
+        this.mGetFrameBitmap = mGetFrameBitmap;
         mSize = dimensions;
 
         Type.Builder yuvTypeBuilder = new Type.Builder(rs, Element.YUV(rs));
@@ -49,6 +51,7 @@ public class Progress {
         IOAllocation ioAllocation = new IOAllocation(mInputNormalAllocation);
         mScriptC = new ScriptC_Normal(rs);
         mScriptC.set_gPrevFrame(mPrevAllocation);
+
     }
 
     public Surface getInputNormalSurface() {
@@ -62,7 +65,6 @@ public class Progress {
 
     class IOAllocation implements Runnable, Allocation.OnBufferAvailableListener {
         private int mPendingFrames = 0;
-        private int mFrameCounter = 0;
 
         private Allocation mInputAllocation;
 
@@ -88,24 +90,31 @@ public class Progress {
                 mInputAllocation.ioReceive();
             }
 
-            mScriptC.set_gFrameCounter(mFrameCounter++);
+//            mScriptC.set_gFrameCounter(mFrameCounter++);
             mScriptC.set_gCurrentFrame(mInputAllocation);
-            mScriptC.set_gCutPointX(0);
-            mScriptC.set_gDoMerge(0);
+//            mScriptC.set_gCutPointX(0);
+//            mScriptC.set_gDoMerge(0);
 
             // Run processing pass
             mScriptC.forEach_mergeHdrFrames(mPrevAllocation, mOutputAllocation);
             mOutputAllocation.ioSend();
+//            Bitmap bitmap = Bitmap.createBitmap(mSize.getWidth(), mSize.getHeight(), Bitmap.Config.ARGB_8888);
+//            mOutputAllocation.copyTo(bitmap);
+//            mGetFrameBitmap.getBitmap(bitmap);
         }
 
         @Override
         public void onBufferAvailable(Allocation a) {
-            Log.i("onBufferAvailable", "onBufferAvailable");
+//            Log.i("onBufferAvailable", "onBufferAvailable");
             synchronized (this) {
                 mPendingFrames++;
                 mProcessingHandler.post(this);
             }
         }
+    }
+
+    public interface GetFrameBitmap {
+        public void getBitmap(Bitmap bitmap);
     }
 
 

@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.Fragment;
 import android.content.Context;
 import android.content.res.Configuration;
+import android.graphics.Bitmap;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.RectF;
@@ -15,6 +16,7 @@ import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
+import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.os.Bundle;
 import android.renderscript.RenderScript;
@@ -24,6 +26,7 @@ import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -38,13 +41,16 @@ import us.yydcdut.camera2.view.AutoFitTextureView;
 /**
  * Created by yuyidong on 15-1-21.
  */
-public class YUVCameraFragment extends Fragment {
+public class YUVCameraFragment extends Fragment implements Progress.GetFrameBitmap {
     private AutoFitTextureView mPreviewView;
     private Size mPreviewSize;
     private String mCameraId;
     private CaptureRequest.Builder mBuilder;
     private RenderScript mRS;
     private Progress mProcessor;
+
+    private Bitmap mFrameBitmap;
+    private ImageView mframeImage;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -57,7 +63,7 @@ public class YUVCameraFragment extends Fragment {
         mPreviewView = (AutoFitTextureView) view.findViewById(R.id.texture);
         view.findViewById(R.id.btn_capture).setVisibility(View.GONE);
         view.findViewById(R.id.btn_setting).setVisibility(View.GONE);
-        view.findViewById(R.id.view).setVisibility(View.GONE);
+        mframeImage = (ImageView) view.findViewById(R.id.view);
         mPreviewView.setSurfaceTextureListener(mSurfaceTextureListener);
     }
 
@@ -69,7 +75,7 @@ public class YUVCameraFragment extends Fragment {
             setUpCameraOutputs(width, height);
             configureTransform(width, height);
             mRS = RenderScript.create(getActivity());
-            mProcessor = new Progress(mRS, mPreviewSize);
+            mProcessor = new Progress(mRS, mPreviewSize, YUVCameraFragment.this);
 
             SurfaceTexture texture = mPreviewView.getSurfaceTexture();
             assert texture != null;
@@ -203,7 +209,7 @@ public class YUVCameraFragment extends Fragment {
         @Override
         public void onConfigured(CameraCaptureSession session) {
             try {
-                session.setRepeatingRequest(mBuilder.build(), null, null);
+                session.setRepeatingRequest(mBuilder.build(), mCameraCaptureSessionCaptureCallback, null);
             } catch (CameraAccessException e) {
                 e.printStackTrace();
             }
@@ -214,6 +220,21 @@ public class YUVCameraFragment extends Fragment {
         }
     };
 
+    private CameraCaptureSession.CaptureCallback mCameraCaptureSessionCaptureCallback = new CameraCaptureSession.CaptureCallback() {
+        @Override
+        public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
+            super.onCaptureCompleted(session, request, result);
+            if (mframeImage == null) {
+                return;
+            }
+            mframeImage.setImageBitmap(mFrameBitmap);
+        }
+    };
 
+
+    @Override
+    public void getBitmap(Bitmap bitmap) {
+        mFrameBitmap = bitmap;
+    }
 }
 
