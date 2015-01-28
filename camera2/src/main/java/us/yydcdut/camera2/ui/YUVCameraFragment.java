@@ -51,6 +51,8 @@ public class YUVCameraFragment extends Fragment implements Progress.GetFrameBitm
 
     private Bitmap mFrameBitmap;
     private ImageView mframeImage;
+    private Surface mInputSurface;
+    private Surface mPreviewSurface;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -67,7 +69,7 @@ public class YUVCameraFragment extends Fragment implements Progress.GetFrameBitm
         mPreviewView.setSurfaceTextureListener(mSurfaceTextureListener);
     }
 
-    private Surface mInputSurface;
+
     private TextureView.SurfaceTextureListener mSurfaceTextureListener = new TextureView.SurfaceTextureListener() {
 
         @Override
@@ -195,7 +197,7 @@ public class YUVCameraFragment extends Fragment implements Progress.GetFrameBitm
 
         }
     };
-    private Surface mPreviewSurface;
+
 
     private void createSession(CameraDevice camera) throws CameraAccessException {
         mBuilder = camera.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);

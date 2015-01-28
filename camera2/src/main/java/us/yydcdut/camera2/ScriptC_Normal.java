@@ -9,10 +9,9 @@ import android.renderscript.ScriptC;
 import android.renderscript.Type;
 
 /**
- * Created by yuyidong on 15-1-23.
  */
 public class ScriptC_Normal extends ScriptC {
-    private static final String __rs_resource_name = "hdr_merge";
+    private static final String __rs_resource_name = "GG";
 
     public ScriptC_Normal(RenderScript rs) {
         super(rs,
