@@ -1107,9 +1107,11 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
             }
             switch (seekBar.getId()) {
                 case R.id.sb_focus:
-                    mPreviewBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, (float) ((float) i / 10.0));
-                    valueAF = (float) ((float) i / 10.0);
-                    mSeekBarTextView.setText("聚焦：" + valueAF);
+                    float minimumLens = mCameraCharacteristics.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE);
+                    float num = (((float) i) * minimumLens / 100);
+                    mPreviewBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, num);
+                    int showNum = (int) num;
+                    mSeekBarTextView.setText("聚焦：" + showNum);
                     break;
                 case R.id.sb_ae:
                     Switch switchAE = (Switch) getView().findViewById(R.id.switch_ae);
