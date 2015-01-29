@@ -452,8 +452,8 @@ public class PreviewFragment extends Fragment implements View.OnClickListener {
         }
 
         private void checkState(CaptureResult result) {
-            mFrameBitmap = mPreviewView.getBitmap();
-            mMainHandler.sendEmptyMessage(1);
+//            mFrameBitmap = mPreviewView.getBitmap();
+//            mMainHandler.sendEmptyMessage(1);
             switch (mState) {
                 case STATE_PREVIEW:
                     // NOTHING

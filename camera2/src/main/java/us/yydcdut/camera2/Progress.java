@@ -21,8 +21,8 @@ public class Progress {
     private Allocation mPrevAllocation;
     private HandlerThread mProcessingThread;
     private Handler mProcessingHandler;
-    private ScriptC_Normal mScriptC;
     private Size mPreviewSize;
+    private ScriptC_yuv2rgb mScriptC;
 
 
     private GetFrameBitmap mGetFrameBitmap = null;
@@ -37,7 +37,7 @@ public class Progress {
         createAllcation(rs, dimensions);
 
         IOAllocation ioAllocation = new IOAllocation(mInputNormalAllocation);
-        mScriptC = new ScriptC_Normal(rs);
+        mScriptC = new ScriptC_yuv2rgb(rs);
         mScriptC.set_gPrevFrame(mPrevAllocation);
 
     }
@@ -50,7 +50,7 @@ public class Progress {
 
         createAllcation(rs, dimensions);
 
-        mScriptC = new ScriptC_Normal(rs);
+        mScriptC = new ScriptC_yuv2rgb(rs);
         mScriptC.set_gPrevFrame(mPrevAllocation);
         IOAllocation ioAllocation = new IOAllocation(mInputNormalAllocation);
 
@@ -64,7 +64,7 @@ public class Progress {
 
         createAllcation(rs, dimensions);
 
-        mScriptC = new ScriptC_Normal(rs);
+        mScriptC = new ScriptC_yuv2rgb(rs);
         mScriptC.set_gPrevFrame(mPrevAllocation);
         IOAllocation ioAllocation = new IOAllocation(mInputNormalAllocation);
 
@@ -105,8 +105,7 @@ public class Progress {
     }
 
 
-    class IOAllocation implements Runnable, Allocation.OnBufferAvailableListener {
-        private int mPendingFrames = 0;
+    class IOAllocation implements Allocation.OnBufferAvailableListener {
 
         private Allocation mInputAllocation;
 
@@ -115,46 +114,26 @@ public class Progress {
             this.mInputAllocation.setOnBufferAvailableListener(this);
         }
 
-        @Override
-        public void run() {
-            // Find out how many frames have arrived
-            int pendingFrames;
-            synchronized (this) {
-                pendingFrames = mPendingFrames;
-                mPendingFrames = 0;
-
-                // Discard extra messages in case processing is slower than frame rate
-                mProcessingHandler.removeCallbacks(this);
-            }
-
-            // Get to newest input
-            for (int i = 0; i < pendingFrames; i++) {
-                mInputAllocation.ioReceive();
-            }
-
-
-            mScriptC.set_gCurrentFrame(mInputAllocation);
-
-            // Run processing pass
-            mScriptC.forEach_mergeHdrFrames(mPrevAllocation, mOutputAllocation);
-            mOutputAllocation.ioSend();
-            if (mGetFrameBitmap != null) {
-                Bitmap bitmap = Bitmap.createBitmap(mPreviewSize.getWidth(), mPreviewSize.getHeight(), Bitmap.Config.ARGB_8888);
-                mOutputAllocation.copyTo(bitmap);
-                mGetFrameBitmap.getBitmap(bitmap);
-            } else if (mGetFrameByteArray != null) {
-                byte[] b = new byte[mPreviewSize.getWidth() * mPreviewSize.getHeight() * 2];
-                mOutputAllocation.copyTo(b);
-                mGetFrameByteArray.getByteArray(b);
-            }
-
-        }
 
         @Override
         public void onBufferAvailable(Allocation a) {
             synchronized (this) {
-                mPendingFrames++;
-                mProcessingHandler.post(this);
+                // Get to newest input
+                mInputAllocation.ioReceive();
+                mScriptC.set_gCurrentFrame(mInputAllocation);
+
+                // Run processing pass
+                mScriptC.forEach_yuv2rgbFrames(mPrevAllocation, mOutputAllocation);
+                mOutputAllocation.ioSend();
+                if (mGetFrameBitmap != null) {
+                    Bitmap bitmap = Bitmap.createBitmap(mPreviewSize.getWidth(), mPreviewSize.getHeight(), Bitmap.Config.ARGB_8888);
+                    mOutputAllocation.copyTo(bitmap);
+                    mGetFrameBitmap.getBitmap(bitmap);
+                } else if (mGetFrameByteArray != null) {
+                    byte[] b = new byte[mPreviewSize.getWidth() * mPreviewSize.getHeight() * 2];
+                    mOutputAllocation.copyTo(b);
+                    mGetFrameByteArray.getByteArray(b);
+                }
             }
         }
     }
