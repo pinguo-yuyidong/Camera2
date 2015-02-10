@@ -57,6 +57,7 @@ public class FlashActivity extends Activity {
             mCameraManager.openCamera("0", new MyCameraDeviceStateCallback(), null);
         } else {
             Toast.makeText(FlashActivity.this, "Flash not available", Toast.LENGTH_SHORT).show();
+            //todo: throw Exception
         }
         mCameraManager.openCamera("0", new MyCameraDeviceStateCallback(), null);
     }
@@ -76,6 +77,7 @@ public class FlashActivity extends Activity {
             try {
                 mBuilder = camera.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL);
                 //flash on, default is on
+                mBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AF_MODE_AUTO);
                 mBuilder.set(CaptureRequest.FLASH_MODE, CameraMetadata.FLASH_MODE_TORCH);
                 List<Surface> list = new ArrayList<Surface>();
                 mSurfaceTexture = new SurfaceTexture(1);
@@ -148,11 +150,9 @@ public class FlashActivity extends Activity {
         public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
             try {
                 if (isChecked) {
-                    mBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AF_MODE_AUTO);
                     mBuilder.set(CaptureRequest.FLASH_MODE, CameraMetadata.FLASH_MODE_TORCH);
                     mSession.setRepeatingRequest(mBuilder.build(), null, null);
                 } else {
-                    mBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AF_MODE_AUTO);
                     mBuilder.set(CaptureRequest.FLASH_MODE, CameraMetadata.FLASH_MODE_OFF);
                     mSession.setRepeatingRequest(mBuilder.build(), null, null);
                 }
@@ -166,10 +166,10 @@ public class FlashActivity extends Activity {
         if (mCameraDevice == null || mSession == null) {
             return;
         }
-                mSession.close();
-                mCameraDevice.close();
-                mCameraDevice = null;
-                mSession = null;
+        mSession.close();
+        mCameraDevice.close();
+        mCameraDevice = null;
+        mSession = null;
     }
 
     @Override
