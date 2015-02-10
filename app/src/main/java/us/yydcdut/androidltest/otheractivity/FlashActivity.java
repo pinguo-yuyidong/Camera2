@@ -2,18 +2,20 @@ package us.yydcdut.androidltest.otheractivity;
 
 import android.app.Activity;
 import android.content.Context;
-import android.graphics.ImageFormat;
+import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
+import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
-import android.media.ImageReader;
 import android.os.Bundle;
+import android.util.Size;
 import android.view.Surface;
 import android.widget.CompoundButton;
 import android.widget.Switch;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,20 +45,24 @@ public class FlashActivity extends Activity {
         flashSwitch.setOnCheckedChangeListener(new MyCheckedChangeListener());
     }
 
+    private CameraManager mCameraManager;
 
     @SuppressWarnings("ResourceType")
     private void init() throws CameraAccessException {
-        CameraManager cameraManager = (CameraManager) FlashActivity.this.getSystemService(Context.CAMERA_SERVICE);
-       /*//here to judge if flash is available
-        CameraCharacteristics cameraCharacteristics = cameraManager.getCameraCharacteristics("0");
+        mCameraManager = (CameraManager) FlashActivity.this.getSystemService(Context.CAMERA_SERVICE);
+        //here to judge if flash is available
+        CameraCharacteristics cameraCharacteristics = mCameraManager.getCameraCharacteristics("0");
         boolean flashAvailable = cameraCharacteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE);
         if (flashAvailable) {
-            cameraManager.openCamera("0", new MyCameraDeviceStateCallback(), null);
+            mCameraManager.openCamera("0", new MyCameraDeviceStateCallback(), null);
         } else {
             Toast.makeText(FlashActivity.this, "Flash not available", Toast.LENGTH_SHORT).show();
-        }*/
-        cameraManager.openCamera("0", new MyCameraDeviceStateCallback(), null);
+        }
+        mCameraManager.openCamera("0", new MyCameraDeviceStateCallback(), null);
     }
+
+    private SurfaceTexture mSurfaceTexture;
+    private Surface mSurface;
 
     /**
      * camera device callback
@@ -72,9 +78,12 @@ public class FlashActivity extends Activity {
                 //flash on, default is on
                 mBuilder.set(CaptureRequest.FLASH_MODE, CameraMetadata.FLASH_MODE_TORCH);
                 List<Surface> list = new ArrayList<Surface>();
-                ImageReader imageReader = ImageReader.newInstance(800, 600, ImageFormat.JPEG, 5);
-                list.add(imageReader.getSurface());
-                mBuilder.addTarget(imageReader.getSurface());
+                mSurfaceTexture = new SurfaceTexture(1);
+                Size size = getSmallestSize(mCameraDevice.getId());
+                mSurfaceTexture.setDefaultBufferSize(size.getWidth(), size.getHeight());
+                mSurface = new Surface(mSurfaceTexture);
+                list.add(mSurface);
+                mBuilder.addTarget(mSurface);
                 camera.createCaptureSession(list, new MyCameraCaptureSessionStateCallback(), null);
             } catch (CameraAccessException e) {
                 e.printStackTrace();
@@ -90,6 +99,23 @@ public class FlashActivity extends Activity {
         public void onError(CameraDevice camera, int error) {
 
         }
+    }
+
+    private Size getSmallestSize(String cameraId) throws CameraAccessException {
+        Size[] outputSizes = mCameraManager.getCameraCharacteristics(cameraId)
+                .get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+                .getOutputSizes(SurfaceTexture.class);
+        if (outputSizes == null || outputSizes.length == 0) {
+            throw new IllegalStateException(
+                    "Camera " + cameraId + "doesn't support any outputSize.");
+        }
+        Size chosen = outputSizes[0];
+        for (Size s : outputSizes) {
+            if (chosen.getWidth() >= s.getWidth() && chosen.getHeight() >= s.getHeight()) {
+                chosen = s;
+            }
+        }
+        return chosen;
     }
 
     /**
@@ -122,15 +148,13 @@ public class FlashActivity extends Activity {
         public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
             try {
                 if (isChecked) {
-                    /*// it doesn't work
+                    mBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AF_MODE_AUTO);
                     mBuilder.set(CaptureRequest.FLASH_MODE, CameraMetadata.FLASH_MODE_TORCH);
-                    mSession.setRepeatingRequest(mBuilder.build(), null, null);*/
-                    init();
+                    mSession.setRepeatingRequest(mBuilder.build(), null, null);
                 } else {
-                    /*// it doesn't work
-                    mBuilder.set(CaptureRequest.FLASH_MODE, CameraMetadata.FLASH_MODE_SINGLE);
-                    mSession.setRepeatingRequest(mBuilder.build(), null, null);*/
-                    close();
+                    mBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AF_MODE_AUTO);
+                    mBuilder.set(CaptureRequest.FLASH_MODE, CameraMetadata.FLASH_MODE_OFF);
+                    mSession.setRepeatingRequest(mBuilder.build(), null, null);
                 }
             } catch (CameraAccessException e) {
                 e.printStackTrace();
@@ -142,16 +166,10 @@ public class FlashActivity extends Activity {
         if (mCameraDevice == null || mSession == null) {
             return;
         }
-        new Thread() {
-            @Override
-            public void run() {
-                super.run();
                 mSession.close();
                 mCameraDevice.close();
                 mCameraDevice = null;
                 mSession = null;
-            }
-        }.start();
     }
 
     @Override
