@@ -9,6 +9,7 @@ import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.params.MeteringRectangle;
 import android.os.Handler;
 import android.util.Log;
+import android.util.Size;
 import android.view.MotionEvent;
 import android.view.TextureView;
 
@@ -40,7 +41,9 @@ public class TextureViewTouchEvent implements MyTextureView.MyTextureViewTouchEv
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 Rect rect = mCameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
-                Log.i("SENSOR_INFO_ACTIVE_ARRAY_SIZE", "rect.left--->" + rect.left + ",,,rect.top--->" + rect.top + ",,,,rect.right--->" + rect.right + ",,,,rect.bottom---->" + rect.bottom);
+                Log.i("onAreaTouchEvent", "SENSOR_INFO_ACTIVE_ARRAY_SIZE,,,,,,,,rect.left--->" + rect.left + ",,,rect.top--->" + rect.top + ",,,,rect.right--->" + rect.right + ",,,,rect.bottom---->" + rect.bottom);
+                Size size = mCameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE);
+                Log.i("onAreaTouchEvent", "mCameraCharacteristics,,,,size.getWidth()--->" + size.getWidth() + ",,,size.getHeight()--->" + size.getHeight());
                 int areaSize = 200;
                 int right = rect.right;
                 int bottom = rect.bottom;
@@ -58,22 +61,12 @@ public class TextureViewTouchEvent implements MyTextureView.MyTextureViewTouchEv
                 newRect = new Rect(focusLeft, focusBottom, focusLeft + areaSize, focusBottom + areaSize);
                 MeteringRectangle meteringRectangle = new MeteringRectangle(newRect, 500);
                 MeteringRectangle[] meteringRectangleArr = {meteringRectangle};
-                mPreviewBuilder.set(CaptureRequest.CONTROL_AF_REGIONS, meteringRectangleArr);
                 mPreviewBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_CANCEL);
+                mPreviewBuilder.set(CaptureRequest.CONTROL_AF_REGIONS, meteringRectangleArr);
                 mPreviewBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START);
-                mPreviewBuilder.set(CaptureRequest.CONTROL_AE_REGIONS, meteringRectangleArr);
-                mPreviewBuilder.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CameraMetadata.CONTROL_AE_PRECAPTURE_TRIGGER_START);
                 updatePreview();
                 break;
             case MotionEvent.ACTION_UP:
-                int hardWare = mCameraCharacteristics.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL);
-                Log.i("ACTION_UP", "INFO_SUPPORTED_HARDWARE_LEVEL--->" + hardWare);
-                int max_awb = mCameraCharacteristics.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AWB);
-                Log.i("ACTION_UP", "CONTROL_MAX_REGIONS_AWB--->" + max_awb);
-                int[] scenceSupport = mCameraCharacteristics.get(CameraCharacteristics.CONTROL_AVAILABLE_SCENE_MODES);
-                for (int i = 0; i < scenceSupport.length; i++) {
-                    Log.i("ACTION_UP", "scenceSupport--->" + scenceSupport[i]);
-                }
                 break;
         }
         return true;

@@ -279,7 +279,6 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
     private int valueAE;
     private long valueAETime;
     private int valueISO;
-
     //----------------------------seekbar的值-------------------------
     /**
      * UI线程的handler
@@ -785,9 +784,15 @@ public class DisplayFragment extends Fragment implements View.OnClickListener {
             mCameraId = "0";
         }
         //关闭相机再开启另外个摄像头
+        if (mCameraCaptureSession != null) {
+            mCameraCaptureSession.close();
+            mCameraCaptureSession = null;
+        }
         if (mCameraDevice != null) {
             mCameraDevice.close();
+            mCameraDevice = null;
         }
+
         try {
             setUpCameraOutputs(viewWidth, viewHeight);
             configureTransform(viewWidth, viewHeight);
